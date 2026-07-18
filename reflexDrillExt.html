@@ -212,6 +212,7 @@
 
       <div class="rep-row">
         <span class="rep-label" id="repCountLabel">0 / 12 reps</span>
+        <span class="rep-label" id="firstChordLabel" style="display:none;"></span>
         <span class="rep-label" id="avgLabel" style="display:none;"></span>
       </div>
       <div class="progress-track">
@@ -666,6 +667,7 @@
     liveTimerEl: document.getElementById("liveTimerEl"),
     heldRowEl: document.getElementById("heldRowEl"),
     repCountLabel: document.getElementById("repCountLabel"),
+    firstChordLabel: document.getElementById("firstChordLabel"),
     avgLabel: document.getElementById("avgLabel"),
     progressFill: document.getElementById("progressFill"),
     startBtn: document.getElementById("startBtn"),
@@ -854,6 +856,12 @@
 
   function renderReps() {
     el.repCountLabel.textContent = `${state.repCount} / ${state.repTarget} reps`;
+    if (state.repTimes.length > 0) {
+      el.firstChordLabel.style.display = "";
+      el.firstChordLabel.textContent = `first chord ${(state.repTimes[0] / 1000).toFixed(2)}s`;
+    } else {
+      el.firstChordLabel.style.display = "none";
+    }
     const avgSoFar = state.repTimes.length ? state.repTimes.reduce((a, b) => a + b, 0) / state.repTimes.length : null;
     if (avgSoFar !== null) {
       el.avgLabel.style.display = "";
