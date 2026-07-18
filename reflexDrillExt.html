@@ -880,7 +880,8 @@
       el.completeBox.style.display = "flex";
       const avgSoFar = state.repTimes.reduce((a, b) => a + b, 0) / state.repTimes.length;
       const best = Math.min(...state.repTimes);
-      el.completeText.textContent = `${state.repTarget} reps — avg ${(avgSoFar / 1000).toFixed(2)}s, best ${(best / 1000).toFixed(2)}s`;
+      const firstChord = state.repTimes[0];
+      el.completeText.textContent = `${state.repTarget} reps — avg ${(avgSoFar / 1000).toFixed(2)}s, best ${(best / 1000).toFixed(2)}s, first chord ${(firstChord / 1000).toFixed(2)}s`;
       el.nextBtnText.textContent = (state.mode === "family" || state.mode === "extended") ? "Next in family" : "Next chord";
     } else {
       el.completeBox.style.display = "none";
