@@ -509,8 +509,10 @@
     if (!state.running) return;
 
     if (heldSet.size === 0) {
-      state.phase = "timing";
-      readyTime = performance.now();
+      if (state.phase === "armed" || state.phase === "success") {
+        state.phase = "timing";
+        readyTime = performance.now();
+      }
       renderPhase();
       return;
     }
