@@ -3,7 +3,6 @@
 A two-tool setup for drilling chords on a MIDI keyboard with Anki integration. Use the **HTML app** for timed, repetitive practice sessions, or the **Python script** for hands-free Anki card reviews.
 
 ![Reflex Drill HTML App — top](./screenshot-1.png)
-![Reflex Drill HTML App — bottom](./screenshot-2.png)
 
 ---
 
