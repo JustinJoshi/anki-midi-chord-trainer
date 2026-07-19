@@ -189,6 +189,13 @@
   .quality-group .segmented {
     flex: 1; flex-wrap: wrap;
   }
+
+  .anki-sync-status {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: #7A7156; min-height: 16px; margin-top: 2px;
+  }
+  .anki-sync-status-active { color: #7FA37A; }
+  .anki-sync-status-error { color: #C1614A; }
 </style>
 </head>
 <body>
@@ -231,6 +238,13 @@
       <div class="control-group">
         <span class="control-label">Shuffle</span>
         <div class="segmented" id="shuffleSeg"></div>
+      </div>
+
+      <!-- New control group for following the current Anki review card -->
+      <div class="control-group">
+        <span class="control-label">Anki Sync</span>
+        <div class="segmented" id="ankiSyncSeg"></div>
+        <div class="anki-sync-status" id="ankiSyncStatus"></div>
       </div>
     </div>
 
@@ -419,12 +433,18 @@
     heldNotesDisplay: [],
     justCompleted: false,
     history: {},
+
+    ankiFollow: false,
+    lastCardId: null,
+    detectedChord: null,
+    ankiSyncStatus: "Follow off",
   };
 
   const heldSet = new Set();
   let readyTime = null;
   let rafId = null;
   let audioCtx = null;
+  let ankiPollId = null;
 
   // ---------- Persistence ----------
   const STORAGE_KEY = "blocked-drill-midi-history";
@@ -506,6 +526,130 @@
     }
   }
   pingAnki();
+
+  // ---------- Anki card-following sync ----------
+  function parseChordFromText(text) {
+    if (!text) return null;
+    // Strip HTML tags and collapse whitespace.
+    const plain = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+    // Build suffix regex from known qualities, longest first to avoid ambiguity.
+    const suffixes = SINGLE_QUALITIES.map((q) => q.suffix)
+      .sort((a, b) => b.length - a.length)
+      .map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const suffixRe = suffixes.length ? `(${suffixes.join("|")})?` : "()?";
+
+    // Root tokens — longer accidental names first so "C#" beats "C".
+    const rootTokens = ["C#","Db","D#","Eb","F#","Gb","G#","Ab","A#","Bb","C","D","E","F","G","A","B"];
+
+    // Avoid matching a root/suffix inside a larger token.
+    // Optional whitespace between root and suffix handles "Gm7" and "G m7".
+    const pattern = new RegExp(
+      `(?<![A-Za-z#b♯♭0-9])(${rootTokens.join("|")})\\s*${suffixRe}(?![A-Za-z#b♯♭0-9])`,
+      "i"
+    );
+
+    const m = plain.match(pattern);
+    if (!m) return null;
+
+    const rootName = m[1].toUpperCase();
+    const suffix = m[2] || "";
+
+    // Map any parsed root name to the closest ROOTS entry
+    // (the app uses flats for enharmonic keys except F#).
+    const rootMap = {
+      "C": 0, "C#": 1, "DB": 1, "D": 2, "D#": 3, "EB": 3,
+      "E": 4, "F": 5, "F#": 6, "GB": 6, "G": 7, "G#": 8,
+      "AB": 8, "A": 9, "A#": 10, "BB": 10, "B": 11,
+    };
+    const pc = rootMap[rootName];
+    if (pc === undefined) return null;
+    const root = ROOTS.find((r) => r.pc === pc);
+    if (!root) return null;
+
+    const qualityIdx = SINGLE_QUALITIES.findIndex(
+      (q) => q.suffix.toLowerCase() === suffix.toLowerCase()
+    );
+    if (qualityIdx === -1) return null;
+
+    return { root, qualityIdx, suffix };
+  }
+
+  function applyAnkiChord(parsed) {
+    stopDrill();
+    state.mode = "single";
+    state.root = parsed.root;
+    state.qualityIdx = parsed.qualityIdx;
+    state.detectedChord = `${parsed.root.name}${parsed.suffix}`;
+    state.ankiSyncStatus = `Following: ${state.detectedChord}`;
+    render();
+  }
+
+  async function pollAnkiCard() {
+    if (!state.ankiFollow) return;
+
+    try {
+      const res = await fetch("http://127.0.0.1:8765", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "guiCurrentCard", version: 6 })
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        state.ankiSyncStatus = `Anki: ${data.error}`;
+        state.lastCardId = null;
+        renderAnkiSync();
+        return;
+      }
+
+      const cardId = data.result && data.result.cardId;
+      if (!cardId || cardId === state.lastCardId) {
+        // No change; refresh status text only.
+        renderAnkiSync();
+        return;
+      }
+
+      state.lastCardId = cardId;
+      const question = data.result.question || "";
+      const parsed = parseChordFromText(question);
+
+      if (parsed) {
+        applyAnkiChord(parsed);
+      } else {
+        state.detectedChord = null;
+        state.ankiSyncStatus = "Card found, no chord parsed";
+        renderAnkiSync();
+      }
+    } catch (e) {
+      state.ankiSyncStatus = "Anki not reachable";
+      state.lastCardId = null;
+      renderAnkiSync();
+    }
+  }
+
+  function startAnkiPolling() {
+    if (ankiPollId) return;
+    pollAnkiCard(); // immediate first check
+    ankiPollId = setInterval(pollAnkiCard, 800);
+  }
+
+  function stopAnkiPolling() {
+    if (ankiPollId) {
+      clearInterval(ankiPollId);
+      ankiPollId = null;
+    }
+    state.lastCardId = null;
+    state.detectedChord = null;
+    state.ankiSyncStatus = "Follow off";
+  }
+
+  function setAnkiFollow(enabled) {
+    state.ankiFollow = enabled;
+    if (enabled) startAnkiPolling();
+    else stopAnkiPolling();
+    renderAnkiSync();
+  }
 
   // ---------- Derived getters ----------
   function currentQuality() {
@@ -716,6 +860,8 @@
     repSeg: document.getElementById("repSeg"),
     displayNotesSeg: document.getElementById("displayNotesSeg"), // <-- Added element reference
     shuffleSeg: document.getElementById("shuffleSeg"),
+    ankiSyncSeg: document.getElementById("ankiSyncSeg"),
+    ankiSyncStatus: document.getElementById("ankiSyncStatus"),
     familyStrip: document.getElementById("familyStrip"),
     symbolEl: document.getElementById("symbolEl"),
     chordNotesEl: document.getElementById("chordNotesEl"),
@@ -914,6 +1060,27 @@
     el.shuffleSeg.appendChild(btn);
   }
 
+  function renderAnkiSync() {
+    el.ankiSyncSeg.innerHTML = "";
+    const options = [
+      { value: false, label: "Off" },
+      { value: true, label: "Follow card" },
+    ];
+    options.forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.className = "seg seg-btn" + (state.ankiFollow === opt.value ? " seg-btn-active" : "");
+      btn.textContent = opt.label;
+      btn.onclick = () => { setAnkiFollow(opt.value); };
+      el.ankiSyncSeg.appendChild(btn);
+    });
+
+    el.ankiSyncStatus.textContent = state.ankiSyncStatus;
+    el.ankiSyncStatus.className = "anki-sync-status" +
+      (state.ankiFollow && state.detectedChord ? " anki-sync-status-active" : "") +
+      (state.ankiFollow && !state.detectedChord && state.ankiSyncStatus.includes("not reachable")
+        ? " anki-sync-status-error" : "");
+  }
+
   function renderFamilyStrip() {
     if (state.mode !== "family" && state.mode !== "extended") {
       el.familyStrip.style.display = "none";
@@ -1035,6 +1202,7 @@
     renderRepSeg();
     renderDisplayNotesSeg(); // <-- Call the new render function
     renderShuffleBtn();
+    renderAnkiSync();
     renderFamilyStrip();
     renderChordCard();
     renderPhase();

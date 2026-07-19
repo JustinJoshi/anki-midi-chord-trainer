@@ -35,6 +35,7 @@ Best for **speed and muscle-memory drilling** on a single chord or chord family.
   - **Family Cycle** — cycle through maj7 → 7 → m7 → m7b5 → dim7
   - **Extended Family** — include 9ths, 11ths, and 13ths
 - Toggle **Show/Hide** chord notes if you want to test recognition vs. muscle memory.
+- **Anki Sync** — turn on "Follow card" and the app polls AnkiConnect for the current review card. When the card changes, the app parses the chord on the front (e.g. `Gm7`, `Cmaj7`, `F#m9(maj7)`) and automatically selects it for you.
 
 ### `progression-drill.html` — Progression Drill
 
@@ -109,9 +110,19 @@ Both HTML apps need to be served locally for Web MIDI to work.
    - Chord drill: `http://localhost:8766/reflexDrillExt.html`
    - Progression drill: `http://localhost:8766/progression-drill.html`
 3. Click **Connect MIDI Keyboard** and allow MIDI access when prompted.
-4. Select your settings and press **Start**.
+4. (Optional) Turn on **Anki Sync → Follow card** to have the app auto-select the chord shown on Anki's current card.
+5. Select your settings and press **Start**.
 
 > **Tip:** You can also create desktop shortcuts / taskbar icons that auto-start the server and open the browser. See the launcher scripts below.
+
+### Anki Sync card format
+
+When **Follow card** is enabled, the app reads the rendered front of the current Anki review card via AnkiConnect and looks for a chord symbol. Supported examples:
+
+- `Gm7`, `Cmaj7`, `F#m9(maj7)`, `Bbmaj9`, `A13#11`, `Eb7b9`
+- Sharps are mapped to their enharmonic flat roots (`C#m7` becomes `Dbm7`).
+
+If the card front doesn't contain a recognizable chord, the status line will say "Card found, no chord parsed".
 
 ---
 
