@@ -50,13 +50,18 @@
   }
 
   .controls-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 14px 22px;
     margin-bottom: 22px;
   }
-  .control-group { display: flex; flex-direction: column; gap: 8px; }
-  #rootGroup, #qualityGroup { grid-column: 1 / -1; }
+  .control-group {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    flex: 0 1 auto;
+  }
+  #rootGroup, #qualityGroup { flex-basis: 100%; }
+  .segmented, .root-grid { justify-content: center; }
   .control-label {
     font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em;
     text-transform: uppercase; color: #A79B85;
