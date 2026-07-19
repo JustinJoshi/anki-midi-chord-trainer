@@ -19,7 +19,7 @@
   .btn:active { transform: scale(0.97); }
   .seg { transition: all 0.15s ease; cursor: pointer; }
 
-  .wrap { width: 100%; max-width: 520px; }
+  .wrap { width: 95%; max-width: 1800px; }
 
   .header { margin-bottom: 18px; text-align: center; }
   .eyebrow {
@@ -49,8 +49,14 @@
     border-radius: 8px; font-size: 12px; padding: 3px 6px;
   }
 
-  .controls-row { display: flex; flex-direction: column; gap: 14px; margin-bottom: 22px; }
+  .controls-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 14px 22px;
+    margin-bottom: 22px;
+  }
   .control-group { display: flex; flex-direction: column; gap: 8px; }
+  #rootGroup, #qualityGroup { grid-column: 1 / -1; }
   .control-label {
     font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em;
     text-transform: uppercase; color: #A79B85;
@@ -213,7 +219,7 @@
         <div class="segmented" id="modeSeg"></div>
       </div>
 
-      <div class="control-group">
+      <div class="control-group" id="rootGroup">
         <span class="control-label">Root</span>
         <div class="root-grid" id="rootGrid"></div>
       </div>
