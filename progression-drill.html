@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Progression Drill</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #16140F; }
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  .btn { transition: all 0.15s ease; cursor: pointer; }
+  .btn:active { transform: scale(0.97); }
+  .seg { transition: all 0.15s ease; cursor: pointer; }
+  select { cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="root">
+  <div style="color:#EDE6D6;font-family:sans-serif;padding:40px;text-align:center;">
+    Loading… if this message doesn't go away, open your browser console (F12) and check for a red error.
+  </div>
+</div>
+<script>
+  window.addEventListener("error", function (e) {
+    var root = document.getElementById("root");
+    if (root) {
+      root.innerHTML =
+        '<div style="color:#f2a; font-family: monospace; padding: 40px; white-space: pre-wrap;">' +
+        'Something failed to load:\n\n' + (e.message || e) +
+        '\n\nCheck your internet connection (this page needs to load React/Tone.js from a CDN), ' +
+        'or try opening it via a local server instead of double-clicking the file.</div>';
+    }
+  });
+</script>
+
+<script type="text/babel" data-presets="env,react">
+/**
+ * PROGRESSION DRILL — how to practice with this tool
+ * ----------------------------------------------------
+ * Step 1: Comp the chords alone, hands-on (left hand only).
+ *         Pick one key (start with C). Play the ii-V-I as block chords in
+ *         your left hand: Dm7 -> G7 -> Cmaj7. Slow, no rushing. Let your
+ *         hand physically move between the three shapes, lift and reset
+ *         like a blocked chord drill, until the MOTION between them feels
+ *         smooth -- not just each chord in isolation.
+ *
+ * Step 2: Add the right hand -- scale over each chord as it changes.
+ *         Once the left-hand motion is smooth, layer in the right hand:
+ *         run the scale shown under the chord symbol (D Dorian -> G
+ *         Mixolydian -> C Ionian) and switch the instant the chord changes.
+ *         This is the actual "ears and hands catching the change" skill --
+ *         it's the whole point of this drill.
+ *
+ * Step 3: Loop it with a metronome, not free-time.
+ *         Set a slow tempo and loop the progression repeatedly, same
+ *         "accuracy first, speed later" rule as chord drilling. Increase
+ *         tempo only once a pass through is clean. (This tool auto-loops
+ *         once you complete a full pass -- keep going.)
+ *
+ * Step 4: Cycle through your other keys the same way.
+ *         Once C's ii-V-I is smooth, do the same three steps in G, D, A, E
+ *         -- same chords you already know, just now moving between them.
+ *
+ * Step 5: Add the 12-Bar Blues alongside ii-V-I.
+ *         Switch the "Progression" toggle to 12-Bar Blues and repeat the
+ *         same process in C first. This gives you a second, different
+ *         harmonic vehicle running in parallel -- the traditional starting
+ *         point for jazz improv.
+ *
+ * Step 6: Practice against a real backing track, not silence.
+ *         Once the shapes and scale-switching feel solid alone, practice
+ *         against a real rhythm section -- free ii-V-I and 12-bar-blues
+ *         backing tracks are all over YouTube, or use Jamey Aebersold's
+ *         play-along volumes, which are built for exactly this purpose.
+ *         Playing against real tempo and real time feel is a different
+ *         (and necessary) skill from practicing alone with a metronome.
+ *
+ * Ear-training piece, running alongside all of this:
+ *         Pick one simple blues or jazz tune you like and just listen to
+ *         it on repeat for a few days before trying to play anything from
+ *         it -- the goal is to be able to hum the changes before you play
+ *         them. Not a separate project, just something to have on in the
+ *         background of your week.
+ *
+ * NOTE ON STORAGE: this standalone version saves progress to this
+ * browser's own localStorage, not Claude's storage system. It persists
+ * across reopens of this same file in the same browser, but won't follow
+ * you to a different browser or device.
+ */
+
+const { useState, useRef, useEffect, useCallback } = React;
+
+const SHARP_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const ROOTS = [
+  { pc: 0, name: "C" }, { pc: 7, name: "G" }, { pc: 2, name: "D" },
+  { pc: 9, name: "A" }, { pc: 4, name: "E" },
+];
+
+const QUALITY = {
+  maj7: { tones: [0, 4, 7, 11], scale: "Ionian" },
+  m7:   { tones: [0, 3, 7, 10], scale: "Dorian" },
+  dom7: { tones: [0, 4, 7, 10], scale: "Mixolydian" },
+};
+
+const STORAGE_KEY = "progression-drill-history-v1";
+
+function noteName(pc) { return SHARP_NAMES[((pc % 12) + 12) % 12]; }
+function pcSetOf(rootPc, tones) { return new Set(tones.map((iv) => (rootPc + iv) % 12)); }
+function setsEqual(a, b) {
+  if (a.size !== b.size) return false;
+  for (const x of a) if (!b.has(x)) return false;
+  return true;
+}
+function chordSymbol(rootPc, qualityKey) {
+  const suffix = qualityKey === "maj7" ? "maj7" : qualityKey === "m7" ? "m7" : "7";
+  return `${noteName(rootPc)}${suffix}`;
+}
+function buildIiVI(keyRootPc) {
+  const ii = (keyRootPc + 2) % 12;
+  const V = (keyRootPc + 7) % 12;
+  const I = keyRootPc;
+  return [
+    { label: "ii", root: ii, quality: "m7" },
+    { label: "V", root: V, quality: "dom7" },
+    { label: "I", root: I, quality: "maj7" },
+  ];
+}
+function buildBlues12(keyRootPc) {
+  const I = keyRootPc;
+  const IV = (keyRootPc + 5) % 12;
+  const V = (keyRootPc + 7) % 12;
+  const seq = [I, I, I, I, IV, IV, I, I, V, IV, I, I];
+  return seq.map((root, i) => ({ label: `bar ${i + 1}`, root, quality: "dom7" }));
+}
+const PROGRESSION_TYPES = [
+  { key: "ii-V-I", label: "ii-V-I", build: buildIiVI },
+  { key: "blues12", label: "12-Bar Blues", build: buildBlues12 },
+];
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) { return {}; }
+}
+function saveHistory(history) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(history)); } catch (e) {}
+}
+
+const Icon = { play: "▶", stop: "■", plug: "🔌", piano: "🎹", reset: "↺", note: "🎵" };
+
+function ProgressionDrill() {
+  const [progType, setProgType] = useState("ii-V-I");
+  const [keyRoot, setKeyRoot] = useState(ROOTS[0]);
+
+  const [midiSupported, setMidiSupported] = useState(true);
+  const [midiConnected, setMidiConnected] = useState(false);
+  const [inputs, setInputs] = useState([]);
+  const [selectedInputId, setSelectedInputId] = useState(null);
+
+  const [running, setRunning] = useState(false);
+  const [stepIdx, setStepIdx] = useState(0);
+  const [phase, setPhase] = useState("idle");
+  const [liveMs, setLiveMs] = useState(0);
+  const [heldNotesDisplay, setHeldNotesDisplay] = useState([]);
+  const [loopCount, setLoopCount] = useState(0);
+  const [stepTimes, setStepTimes] = useState([]);
+  const [history, setHistory] = useState(() => loadHistory());
+
+  const midiAccessRef = useRef(null);
+  const heldSetRef = useRef(new Set());
+  const phaseRef = useRef("idle");
+  const runningRef = useRef(false);
+  const readyTimeRef = useRef(null);
+  const rafRef = useRef(null);
+  const chimeRef = useRef(null);
+  const loopChimeRef = useRef(null);
+  const stepIdxRef = useRef(0);
+  const stepTimesRef = useRef([]);
+  const loopCountRef = useRef(0);
+  const historyKeyRef = useRef("");
+
+  const progDef = PROGRESSION_TYPES.find((p) => p.key === progType);
+  const sequence = progDef.build(keyRoot.pc);
+  const historyKey = `${progType}-${keyRoot.name}`;
+  const current = sequence[stepIdx];
+  const currentSymbol = chordSymbol(current.root, current.quality);
+  const currentScaleLabel = `${noteName(current.root)} ${QUALITY[current.quality].scale}`;
+
+  useEffect(() => { historyKeyRef.current = historyKey; }, [historyKey]);
+  useEffect(() => { saveHistory(history); }, [history]);
+
+  useEffect(() => {
+    chimeRef.current = new Tone.Synth({
+      oscillator: { type: "sine" },
+      envelope: { attack: 0.001, decay: 0.15, sustain: 0, release: 0.1 },
+    }).toDestination();
+    chimeRef.current.volume.value = -8;
+    loopChimeRef.current = new Tone.Synth({
+      oscillator: { type: "triangle" },
+      envelope: { attack: 0.001, decay: 0.3, sustain: 0, release: 0.2 },
+    }).toDestination();
+    loopChimeRef.current.volume.value = -6;
+    return () => { chimeRef.current && chimeRef.current.dispose(); loopChimeRef.current && loopChimeRef.current.dispose(); };
+  }, []);
+
+  const refreshInputs = useCallback((access) => {
+    const list = [];
+    access.inputs.forEach((input) => list.push({ id: input.id, name: input.name || "MIDI Device" }));
+    setInputs(list);
+    setSelectedInputId((prev) => prev || (list[0] && list[0].id));
+  }, []);
+
+  const handleMidiMessage = useCallback((e) => {
+    const [status, note, velocity] = e.data;
+    const command = status & 0xf0;
+    const isNoteOn = command === 0x90 && velocity > 0;
+    const isNoteOff = command === 0x80 || (command === 0x90 && velocity === 0);
+    if (isNoteOn) heldSetRef.current.add(note);
+    else if (isNoteOff) heldSetRef.current.delete(note);
+    else return;
+
+    const heldPcs = new Set([...heldSetRef.current].map((n) => n % 12));
+    setHeldNotesDisplay([...heldSetRef.current].sort((a, b) => a - b).map((n) => noteName(n)));
+
+    if (!runningRef.current) return;
+
+    if (phaseRef.current === "success") {
+      if (heldSetRef.current.size === 0) { phaseRef.current = "armed"; setPhase("armed"); }
+      return;
+    }
+    if (heldSetRef.current.size === 0) {
+      phaseRef.current = "timing";
+      setPhase("timing");
+      readyTimeRef.current = performance.now();
+      return;
+    }
+    if (phaseRef.current === "timing" || phaseRef.current === "armed") {
+      const seq = PROGRESSION_TYPES.find((p) => p.key === progType).build(keyRoot.pc);
+      const step = seq[stepIdxRef.current];
+      const target = pcSetOf(step.root, QUALITY[step.quality].tones);
+      if (setsEqual(heldPcs, target)) {
+        const elapsed = readyTimeRef.current ? performance.now() - readyTimeRef.current : 0;
+        phaseRef.current = "success";
+        setPhase("success");
+        chimeRef.current && chimeRef.current.triggerAttackRelease("C6", "16n");
+
+        stepTimesRef.current = [...stepTimesRef.current, elapsed];
+        setStepTimes(stepTimesRef.current);
+
+        const nextIdx = stepIdxRef.current + 1;
+        if (nextIdx >= seq.length) {
+          loopChimeRef.current && loopChimeRef.current.triggerAttackRelease("E6", "8n");
+          setTimeout(() => loopChimeRef.current && loopChimeRef.current.triggerAttackRelease("G6", "8n"), 130);
+
+          const avg = stepTimesRef.current.reduce((a, b) => a + b, 0) / stepTimesRef.current.length;
+          const best = Math.min(...stepTimesRef.current);
+          loopCountRef.current += 1;
+          setLoopCount(loopCountRef.current);
+
+          setHistory((h) => {
+            const prev = h[historyKeyRef.current] || { bestAvgMs: Infinity, bestStepMs: Infinity, totalLoops: 0 };
+            return {
+              ...h,
+              [historyKeyRef.current]: {
+                bestAvgMs: Math.min(prev.bestAvgMs, Math.round(avg)),
+                bestStepMs: Math.min(prev.bestStepMs, Math.round(best)),
+                totalLoops: prev.totalLoops + 1,
+              },
+            };
+          });
+
+          stepTimesRef.current = [];
+          setStepTimes([]);
+          stepIdxRef.current = 0;
+          setStepIdx(0);
+        } else {
+          stepIdxRef.current = nextIdx;
+          setStepIdx(nextIdx);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progType, keyRoot]);
+
+  useEffect(() => { if (!navigator.requestMIDIAccess) setMidiSupported(false); }, []);
+
+  async function connectMidi() {
+    try {
+      const access = await navigator.requestMIDIAccess({ sysex: false });
+      midiAccessRef.current = access;
+      refreshInputs(access);
+      setMidiConnected(true);
+      access.onstatechange = () => refreshInputs(access);
+    } catch (e) { setMidiSupported(false); }
+  }
+
+  useEffect(() => {
+    const access = midiAccessRef.current;
+    if (!access || !selectedInputId) return;
+    access.inputs.forEach((input) => { input.onmidimessage = null; });
+    const input = access.inputs.get(selectedInputId);
+    if (input) input.onmidimessage = handleMidiMessage;
+    return () => { if (input) input.onmidimessage = null; };
+  }, [selectedInputId, handleMidiMessage]);
+
+  useEffect(() => {
+    function tick() {
+      if (phaseRef.current === "timing" && readyTimeRef.current) {
+        setLiveMs(performance.now() - readyTimeRef.current);
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    }
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  function startDrill() {
+    heldSetRef.current = new Set();
+    stepIdxRef.current = 0;
+    stepTimesRef.current = [];
+    loopCountRef.current = 0;
+    setStepIdx(0);
+    setStepTimes([]);
+    setLoopCount(0);
+    phaseRef.current = "armed";
+    setPhase("armed");
+    readyTimeRef.current = null;
+    runningRef.current = true;
+    setRunning(true);
+  }
+  function stopDrill() {
+    runningRef.current = false;
+    setRunning(false);
+    phaseRef.current = "idle";
+    setPhase("idle");
+  }
+
+  const stats = history[historyKey];
+  const avgSoFar = stepTimes.length ? stepTimes.reduce((a, b) => a + b, 0) / stepTimes.length : null;
+
+  const statusText =
+    phase === "idle" ? "Press Start, then lift your hands off the keys"
+    : phase === "armed" ? "Lift your hands fully off the keys"
+    : phase === "timing" ? "Play it…"
+    : "✓ Nice";
+
+  return (
+    <div style={styles.page}>
+      <div style={styles.wrap}>
+        <div style={styles.header}>
+          <div style={styles.eyebrow}>progression drill — MIDI-verified</div>
+          <h1 style={styles.title}>Move through the changes, not just one chord.</h1>
+        </div>
+
+        <div style={styles.midiBar}>
+          {!midiSupported ? (
+            <span style={styles.midiWarn}>Web MIDI isn't supported here (try Chrome/Edge over HTTPS or localhost).</span>
+          ) : !midiConnected ? (
+            <button className="btn" style={styles.connectBtn} onClick={connectMidi}>{Icon.plug} Connect MIDI Keyboard</button>
+          ) : (
+            <div style={styles.midiConnectedRow}>
+              <span>{Icon.piano}</span>
+              <span style={styles.midiConnectedText}>{inputs.length > 0 ? "Connected" : "No devices found"}</span>
+              {inputs.length > 1 && (
+                <select value={selectedInputId || ""} onChange={(e) => setSelectedInputId(e.target.value)} style={styles.midiSelect}>
+                  {inputs.map((i) => (<option key={i.id} value={i.id}>{i.name}</option>))}
+                </select>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div style={styles.controlsRow}>
+          <div style={styles.controlGroup}>
+            <span style={styles.controlLabel}>Progression</span>
+            <div style={styles.segmented}>
+              {PROGRESSION_TYPES.map((p) => (
+                <button key={p.key} className="seg" onClick={() => { stopDrill(); setProgType(p.key); }}
+                  style={{ ...styles.segBtn, ...(progType === p.key ? styles.segBtnActive : {}) }}>
+                  {Icon.note} {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={styles.controlGroup}>
+            <span style={styles.controlLabel}>Key</span>
+            <div style={styles.segmented}>
+              {ROOTS.map((r) => (
+                <button key={r.pc} className="seg" onClick={() => { stopDrill(); setKeyRoot(r); }}
+                  style={{ ...styles.segBtn, ...(keyRoot.pc === r.pc ? styles.segBtnActive : {}) }}>{r.name}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.card}>
+          <div style={styles.seqStrip}>
+            {sequence.map((s, i) => (
+              <div key={i} style={{
+                ...styles.seqChip,
+                ...(i === stepIdx ? styles.seqChipActive : {}),
+                ...(i < stepIdx ? styles.seqChipDone : {}),
+              }}>{chordSymbol(s.root, s.quality)}</div>
+            ))}
+          </div>
+
+          <div style={styles.symbol}>{currentSymbol}</div>
+          <div style={styles.scaleLine}>{currentScaleLabel} in the right hand</div>
+
+          <div style={{
+            ...styles.statusPill,
+            ...(phase === "timing" ? styles.statusTiming : {}),
+            ...(phase === "success" ? styles.statusSuccess : {}),
+          }}>{statusText}</div>
+
+          <div style={styles.liveTimer}>{phase === "timing" ? `${(liveMs / 1000).toFixed(2)}s` : "—"}</div>
+          <div style={styles.heldRow}>{heldNotesDisplay.length > 0 ? `Holding: ${heldNotesDisplay.join(" ")}` : "No keys held"}</div>
+
+          <div style={styles.repRow}>
+            <span style={styles.repLabel}>step {stepIdx + 1} / {sequence.length}</span>
+            <span style={styles.repLabel}>loops: {loopCount}</span>
+            {avgSoFar !== null && <span style={styles.repLabel}>avg {(avgSoFar / 1000).toFixed(2)}s</span>}
+          </div>
+
+          {!running ? (
+            <button className="btn" style={styles.startBtn} onClick={startDrill} disabled={!midiConnected}>
+              {Icon.play} {midiConnected ? "Start Loop" : "Connect MIDI first"}
+            </button>
+          ) : (
+            <button className="btn" style={styles.stopBtn} onClick={stopDrill}>{Icon.stop} Stop</button>
+          )}
+        </div>
+
+        {stats && (
+          <div style={styles.statsRow}>
+            <div style={styles.statBox}>
+              <div style={styles.statValue}>{(stats.bestStepMs / 1000).toFixed(2)}s</div>
+              <div style={styles.statLabel}>fastest single transition</div>
+            </div>
+            <div style={styles.statBox}>
+              <div style={styles.statValue}>{(stats.bestAvgMs / 1000).toFixed(2)}s</div>
+              <div style={styles.statLabel}>best loop average</div>
+            </div>
+            <div style={styles.statBox}>
+              <div style={styles.statValue}>{stats.totalLoops}</div>
+              <div style={styles.statLabel}>loops completed</div>
+            </div>
+            <button className="btn" style={styles.resetBtn}
+              onClick={() => setHistory((h) => { const n = { ...h }; delete n[historyKey]; return n; })}
+              title="Clear stats for this progression + key">{Icon.reset}</button>
+          </div>
+        )}
+
+        <p style={styles.footnote}>
+          Left hand plays the chord shown; right hand runs the matching scale underneath it once you're
+          comfortable. The loop auto-restarts once you complete it — keep going until the whole cycle
+          feels like one motion, not three separate stops. Progress is saved in this browser's local
+          storage.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const styles = {
+  page: { minHeight: "100vh", width: "100%", background: "#16140F", display: "flex", justifyContent: "center", padding: "32px 16px" },
+  wrap: { width: "100%", maxWidth: 520 },
+  header: { marginBottom: 18, textAlign: "center" },
+  eyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", color: "#C9A227", marginBottom: 8 },
+  title: { fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 22, color: "#EDE6D6", margin: 0, lineHeight: 1.3 },
+  midiBar: { display: "flex", justifyContent: "center", marginBottom: 18 },
+  midiWarn: { fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#C1614A", textAlign: "center" },
+  connectBtn: { background: "#C9A227", color: "#16140F", border: "none", borderRadius: 999, padding: "9px 18px", fontSize: 13.5, fontWeight: 600, fontFamily: "'Inter', sans-serif", display: "flex", alignItems: "center", gap: 8 },
+  midiConnectedRow: { display: "flex", alignItems: "center", gap: 8, background: "#1C1912", border: "1px solid #2c2820", borderRadius: 999, padding: "7px 14px" },
+  midiConnectedText: { fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#7FA37A", fontWeight: 500 },
+  midiSelect: { background: "#211E17", color: "#EDE6D6", border: "1px solid #34301F", borderRadius: 8, fontSize: 12, padding: "3px 6px" },
+  controlsRow: { display: "flex", flexDirection: "column", gap: 14, marginBottom: 22 },
+  controlGroup: { display: "flex", flexDirection: "column", gap: 8 },
+  controlLabel: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A79B85" },
+  segmented: { display: "flex", gap: 8, flexWrap: "wrap" },
+  segBtn: { background: "#211E17", border: "1px solid #34301F", color: "#A79B85", borderRadius: 999, padding: "8px 14px", fontSize: 13, fontFamily: "'Inter', sans-serif", fontWeight: 500 },
+  segBtnActive: { background: "#2A2510", border: "1px solid #C9A227", color: "#E8CF7A" },
+  card: { background: "#1C1912", border: "1px solid #2c2820", borderRadius: 24, padding: "28px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 },
+  seqStrip: { display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginBottom: 4 },
+  seqChip: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, padding: "4px 9px", borderRadius: 999, border: "1px solid #34301F", color: "#7A7156" },
+  seqChipActive: { border: "1px solid #C9A227", color: "#E8CF7A", background: "#2A2510" },
+  seqChipDone: { border: "1px solid #3d4a3a", color: "#7FA37A" },
+  symbol: { fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 42, color: "#EDE6D6", letterSpacing: "-0.01em" },
+  scaleLine: { fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: "#7A7156" },
+  statusPill: { fontFamily: "'Inter', sans-serif", fontSize: 12.5, fontWeight: 600, color: "#A79B85", background: "#211E17", border: "1px solid #34301F", borderRadius: 999, padding: "5px 14px", marginTop: 4 },
+  statusTiming: { color: "#E8CF7A", border: "1px solid #C9A227", background: "#2A2510" },
+  statusSuccess: { color: "#16140F", border: "1px solid #7FA37A", background: "#7FA37A" },
+  liveTimer: { fontFamily: "'Fraunces', serif", fontSize: 30, fontWeight: 600, color: "#EDE6D6", marginTop: 4 },
+  heldRow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "#7A7156", minHeight: 16 },
+  repRow: { display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap", justifyContent: "center" },
+  repLabel: { fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: "#A79B85" },
+  startBtn: { background: "#C9A227", color: "#16140F", border: "none", borderRadius: 14, padding: "13px 28px", fontSize: 15, fontWeight: 600, fontFamily: "'Inter', sans-serif", display: "flex", alignItems: "center", gap: 8, width: "100%", justifyContent: "center", marginTop: 8 },
+  stopBtn: { background: "transparent", color: "#C1614A", border: "1px solid #C1614A", borderRadius: 14, padding: "12px 28px", fontSize: 15, fontWeight: 600, fontFamily: "'Inter', sans-serif", display: "flex", alignItems: "center", gap: 8, width: "100%", justifyContent: "center", marginTop: 8 },
+  statsRow: { display: "flex", alignItems: "center", gap: 10, marginTop: 20 },
+  statBox: { flex: 1, background: "#1C1912", border: "1px solid #2c2820", borderRadius: 14, padding: "10px 10px", textAlign: "center" },
+  statValue: { fontFamily: "'Fraunces', serif", fontSize: 17, color: "#EDE6D6", fontWeight: 600 },
+  statLabel: { fontFamily: "'Inter', sans-serif", fontSize: 10, color: "#7A7156", marginTop: 2 },
+  resetBtn: { background: "#1C1912", border: "1px solid #2c2820", color: "#A79B85", borderRadius: 12, padding: "12px", display: "flex", alignItems: "center", justifyContent: "center" },
+  footnote: { fontFamily: "'Inter', sans-serif", fontSize: 12.5, color: "#7A7156", textAlign: "center", marginTop: 18, lineHeight: 1.5 },
+};
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<ProgressionDrill />);
+</script>
+</body>
+</html>
