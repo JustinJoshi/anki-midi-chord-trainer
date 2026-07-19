@@ -196,6 +196,12 @@
         <span class="control-label">Chord Notes</span>
         <div class="segmented" id="displayNotesSeg"></div>
       </div>
+
+      <!-- New control group for shuffling to a random chord -->
+      <div class="control-group">
+        <span class="control-label">Shuffle</span>
+        <div class="segmented" id="shuffleSeg"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -662,6 +668,7 @@
     qualitySeg: document.getElementById("qualitySeg"),
     repSeg: document.getElementById("repSeg"),
     displayNotesSeg: document.getElementById("displayNotesSeg"), // <-- Added element reference
+    shuffleSeg: document.getElementById("shuffleSeg"),
     familyStrip: document.getElementById("familyStrip"),
     symbolEl: document.getElementById("symbolEl"),
     chordNotesEl: document.getElementById("chordNotesEl"),
@@ -806,6 +813,24 @@
     });
   }
 
+  // ---------- New render function for shuffle / random chord ----------
+  function renderShuffleBtn() {
+    el.shuffleSeg.innerHTML = "";
+    const btn = document.createElement("button");
+    btn.className = "seg seg-btn";
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M3 4l5 5"/></svg> Random chord`;
+    btn.onclick = () => {
+      stopDrill();
+      const qualities = state.mode === "family" ? FAMILY
+        : state.mode === "extended" ? EXTENDED
+        : SINGLE_QUALITIES;
+      state.root = ROOTS[Math.floor(Math.random() * ROOTS.length)];
+      state.qualityIdx = Math.floor(Math.random() * qualities.length);
+      render();
+    };
+    el.shuffleSeg.appendChild(btn);
+  }
+
   function renderFamilyStrip() {
     if (state.mode !== "family" && state.mode !== "extended") {
       el.familyStrip.style.display = "none";
@@ -899,12 +924,18 @@
   }
 
   function renderStats() {
+    // Keep the stats row (and its reset button) visible even when no history
+    // exists for the current chord, so clicking "Clear stats" doesn't make
+    // the stat boxes disappear.
+    el.statsRow.style.display = "flex";
     const stats = state.history[key()];
     if (!stats) {
-      el.statsRow.style.display = "none";
+      el.statBest.textContent = "—";
+      el.statAvg.textContent = "—";
+      el.statTotal.textContent = "—";
+      el.statFirstPress.textContent = "—";
       return;
     }
-    el.statsRow.style.display = "flex";
     el.statBest.textContent = `${(stats.bestSingleMs / 1000).toFixed(2)}s`;
     el.statAvg.textContent = `${(stats.bestAvgMs / 1000).toFixed(2)}s`;
     el.statTotal.textContent = stats.totalReps;
@@ -920,6 +951,7 @@
     renderQualitySeg();
     renderRepSeg();
     renderDisplayNotesSeg(); // <-- Call the new render function
+    renderShuffleBtn();
     renderFamilyStrip();
     renderChordCard();
     renderPhase();
