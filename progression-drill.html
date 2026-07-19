@@ -91,6 +91,14 @@
  * browser's own localStorage, not Claude's storage system. It persists
  * across reopens of this same file in the same browser, but won't follow
  * you to a different browser or device.
+ *
+ * NOTE ON ANKI: if Anki desktop is running with the AnkiConnect add-on
+ * installed, this tool will automatically flip the currently-open review
+ * card (front -> back) every time you complete a full loop of the
+ * progression. Pair it with your progression Anki deck: open the card
+ * for a given key/progression in Anki, then run the matching drill here
+ * -- each completed loop flips the card for you, so you keep both hands
+ * on the keyboard instead of alt-tabbing to hit space.
  */
 
 const { useState, useRef, useEffect, useCallback } = React;
@@ -152,6 +160,38 @@ function saveHistory(history) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(history)); } catch (e) {}
 }
 
+// ---------- AnkiConnect integration ----------
+// Requires Anki desktop running with the AnkiConnect add-on installed.
+// "version" just checks the connection; "guiShowAnswer" flips the
+// currently-open review card from front to back.
+async function pingAnki(setAnkiStatus) {
+  try {
+    const res = await fetch("http://127.0.0.1:8765", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "version", version: 6 }),
+    });
+    if (res.ok) setAnkiStatus("✅ Connected to Anki. (Will flip the card after each loop)");
+    else setAnkiStatus("⚠️ Anki not detected. (Open Anki with AnkiConnect to flip cards)");
+  } catch (e) {
+    setAnkiStatus("⚠️ Anki not detected. (Open Anki with AnkiConnect to flip cards)");
+  }
+}
+async function flipAnkiCard(setAnkiStatus) {
+  try {
+    const res = await fetch("http://127.0.0.1:8765", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "guiShowAnswer", version: 6 }),
+    });
+    const data = await res.json();
+    if (data.error) setAnkiStatus(`Anki Error: ${data.error}`);
+    else setAnkiStatus("Anki card flipped successfully!");
+  } catch (e) {
+    setAnkiStatus("Could not reach AnkiConnect. Is Anki running?");
+  }
+}
+
 const Icon = { play: "▶", stop: "■", plug: "🔌", piano: "🎹", reset: "↺", note: "🎵" };
 
 function ProgressionDrill() {
@@ -171,6 +211,7 @@ function ProgressionDrill() {
   const [loopCount, setLoopCount] = useState(0);
   const [stepTimes, setStepTimes] = useState([]);
   const [history, setHistory] = useState(() => loadHistory());
+  const [ankiStatus, setAnkiStatus] = useState("AnkiConnect Status: Checking...");
 
   const midiAccessRef = useRef(null);
   const heldSetRef = useRef(new Set());
@@ -194,6 +235,7 @@ function ProgressionDrill() {
 
   useEffect(() => { historyKeyRef.current = historyKey; }, [historyKey]);
   useEffect(() => { saveHistory(history); }, [history]);
+  useEffect(() => { pingAnki(setAnkiStatus); }, []);
 
   useEffect(() => {
     chimeRef.current = new Tone.Synth({
@@ -257,6 +299,7 @@ function ProgressionDrill() {
         if (nextIdx >= seq.length) {
           loopChimeRef.current && loopChimeRef.current.triggerAttackRelease("E6", "8n");
           setTimeout(() => loopChimeRef.current && loopChimeRef.current.triggerAttackRelease("G6", "8n"), 130);
+          flipAnkiCard(setAnkiStatus);
 
           const avg = stepTimesRef.current.reduce((a, b) => a + b, 0) / stepTimesRef.current.length;
           const best = Math.min(...stepTimesRef.current);
@@ -463,6 +506,7 @@ function ProgressionDrill() {
           feels like one motion, not three separate stops. Progress is saved in this browser's local
           storage.
         </p>
+        <p style={styles.footnote}>{ankiStatus}</p>
       </div>
     </div>
   );
