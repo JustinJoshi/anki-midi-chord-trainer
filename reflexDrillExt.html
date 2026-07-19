@@ -173,6 +173,22 @@
   input[type="number"].rep-input:focus {
     outline: none; border-color: #C9A227;
   }
+
+  /* Quality groups: label on the left, buttons flowing to the right */
+  .quality-groups {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .quality-group {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .quality-group-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: #A79B85;
+    min-width: 42px; flex-shrink: 0; text-align: right;
+  }
+  .quality-group .segmented {
+    flex: 1; flex-wrap: wrap;
+  }
 </style>
 </head>
 <body>
@@ -312,40 +328,57 @@
     { pc: 11, name: "B",  flat: false },
   ];
 
-  const FAMILY = [
-    { suffix: "maj7", tones: [0, 4, 7, 11] },
-    { suffix: "7",    tones: [0, 4, 7, 10] },
-    { suffix: "m7",   tones: [0, 3, 7, 10] },
-    { suffix: "m7b5", tones: [0, 3, 6, 10] },
-    { suffix: "dim7", tones: [0, 3, 6, 9]  },
+  // Qualities grouped by extension type. FAMILY, EXTENDED and SINGLE_QUALITIES
+  // are derived from this structure so the rest of the app keeps working.
+  const QUALITY_GROUPS = [
+    {
+      label: "7th",
+      qualities: [
+        { suffix: "maj7", tones: [0, 4, 7, 11] },
+        { suffix: "7",    tones: [0, 4, 7, 10] },
+        { suffix: "m7",   tones: [0, 3, 7, 10] },
+        { suffix: "m7b5", tones: [0, 3, 6, 10] },
+        { suffix: "dim7", tones: [0, 3, 6, 9]  },
+      ],
+    },
+    {
+      label: "9th",
+      qualities: [
+        { suffix: "9",        tones: [0, 4, 7, 10, 14] },
+        { suffix: "maj9",     tones: [0, 4, 7, 11, 14] },
+        { suffix: "m9",       tones: [0, 3, 7, 10, 14] },
+        { suffix: "m9(maj7)", tones: [0, 3, 7, 11, 14] },
+        { suffix: "7b9",      tones: [0, 4, 7, 10, 13] },
+        { suffix: "7#9",      tones: [0, 4, 7, 10, 15] },
+        { suffix: "m7b5(9)",  tones: [0, 3, 6, 10, 14] },
+      ],
+    },
+    {
+      label: "11th",
+      qualities: [
+        { suffix: "11",      tones: [0, 4, 7, 10, 14, 17] },
+        { suffix: "maj11",   tones: [0, 4, 7, 11, 14, 17] },
+        { suffix: "m11",     tones: [0, 3, 7, 10, 14, 17] },
+        { suffix: "7#11",    tones: [0, 4, 7, 10, 14, 18] },
+        { suffix: "maj7#11", tones: [0, 4, 7, 11, 14, 18] },
+      ],
+    },
+    {
+      label: "13th",
+      qualities: [
+        { suffix: "13",    tones: [0, 4, 7, 10, 14, 17, 21] },
+        { suffix: "maj13", tones: [0, 4, 7, 11, 14, 17, 21] },
+        { suffix: "m13",   tones: [0, 3, 7, 10, 14, 17, 21] },
+        { suffix: "7b13",  tones: [0, 4, 7, 10, 20] },
+        { suffix: "13b9",  tones: [0, 4, 7, 10, 13, 17, 21] },
+        { suffix: "13#11", tones: [0, 4, 7, 10, 14, 18, 21] },
+      ],
+    },
   ];
 
-  // Ninth / Eleventh / Thirteenth extension chords
-  const EXTENDED = [
-    // Ninths
-    { suffix: "9",       tones: [0, 4, 7, 10, 14] },
-    { suffix: "maj9",    tones: [0, 4, 7, 11, 14] },
-    { suffix: "m9",      tones: [0, 3, 7, 10, 14] },
-    { suffix: "m9(maj7)",tones: [0, 3, 7, 11, 14] },
-    { suffix: "7b9",     tones: [0, 4, 7, 10, 13] },
-    { suffix: "7#9",     tones: [0, 4, 7, 10, 15] },
-    { suffix: "m7b5(9)", tones: [0, 3, 6, 10, 14] },
-    // Elevenths
-    { suffix: "11",      tones: [0, 4, 7, 10, 14, 17]     },
-    { suffix: "maj11",   tones: [0, 4, 7, 11, 14, 17]     },
-    { suffix: "m11",     tones: [0, 3, 7, 10, 14, 17]  },
-    { suffix: "7#11",    tones: [0, 4, 7, 10, 14, 18]  },
-    { suffix: "maj7#11", tones: [0, 4, 7, 11, 14, 18]  },
-    // Thirteenths
-    { suffix: "13",      tones: [0, 4, 7, 10, 14, 17, 21]     },
-    { suffix: "maj13",   tones: [0, 4, 7, 11, 14, 17, 21]     },
-    { suffix: "m13",     tones: [0, 3, 7, 10, 14, 17, 21]     },
-    { suffix: "7b13",    tones: [0, 4, 7, 10, 20]         },
-    { suffix: "13b9",    tones: [0, 4, 7, 10, 13, 17, 21]     },
-    { suffix: "13#11",   tones: [0, 4, 7, 10, 14, 18, 21] },
-  ];
-
-  const SINGLE_QUALITIES = FAMILY.concat(EXTENDED);
+  const FAMILY = QUALITY_GROUPS[0].qualities;
+  const EXTENDED = QUALITY_GROUPS.slice(1).reduce((acc, g) => acc.concat(g.qualities), []);
+  const SINGLE_QUALITIES = QUALITY_GROUPS.reduce((acc, g) => acc.concat(g.qualities), []);
   const REP_TARGETS = [8, 12, 16, 20];
 
   function noteName(pc, flat) {
@@ -791,12 +824,31 @@
     }
     el.qualityGroup.style.display = "";
     el.qualitySeg.innerHTML = "";
-    SINGLE_QUALITIES.forEach((q, i) => {
-      const btn = document.createElement("button");
-      btn.className = "seg seg-btn" + (state.qualityIdx === i ? " seg-btn-active" : "");
-      btn.textContent = q.suffix;
-      btn.onclick = () => { stopDrill(); state.qualityIdx = i; render(); };
-      el.qualitySeg.appendChild(btn);
+    el.qualitySeg.className = "quality-groups";
+
+    QUALITY_GROUPS.forEach((group) => {
+      const groupEl = document.createElement("div");
+      groupEl.className = "quality-group";
+
+      const label = document.createElement("div");
+      label.className = "quality-group-label";
+      label.textContent = group.label;
+      groupEl.appendChild(label);
+
+      const row = document.createElement("div");
+      row.className = "segmented";
+
+      group.qualities.forEach((q) => {
+        const globalIdx = SINGLE_QUALITIES.findIndex((sq) => sq.suffix === q.suffix);
+        const btn = document.createElement("button");
+        btn.className = "seg seg-btn" + (state.qualityIdx === globalIdx ? " seg-btn-active" : "");
+        btn.textContent = q.suffix;
+        btn.onclick = () => { stopDrill(); state.qualityIdx = globalIdx; render(); };
+        row.appendChild(btn);
+      });
+
+      groupEl.appendChild(row);
+      el.qualitySeg.appendChild(groupEl);
     });
   }
 
