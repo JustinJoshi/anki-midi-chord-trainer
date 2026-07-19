@@ -159,6 +159,20 @@
 
   button { font: inherit; }
   select { font: inherit; }
+  input[type="number"].rep-input {
+    background: #211E17; border: 1px solid #34301F; color: #EDE6D6;
+    border-radius: 10px; padding: 8px 10px; font-size: 13px;
+    font-family: 'Inter', sans-serif; font-weight: 500;
+    width: 72px; text-align: center;
+    -moz-appearance: textfield;
+  }
+  input[type="number"].rep-input::-webkit-outer-spin-button,
+  input[type="number"].rep-input::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+  }
+  input[type="number"].rep-input:focus {
+    outline: none; border-color: #C9A227;
+  }
 </style>
 </head>
 <body>
@@ -795,6 +809,23 @@
       btn.onclick = () => { state.repTarget = n; render(); };
       el.repSeg.appendChild(btn);
     });
+
+    // Custom rep-count input: lets the user set any number of reps.
+    const input = document.createElement("input");
+    input.type = "number";
+    input.className = "rep-input";
+    input.min = "1";
+    input.max = "999";
+    input.value = state.repTarget;
+    input.title = "Custom reps";
+    input.onchange = () => {
+      let n = parseInt(input.value, 10);
+      if (Number.isNaN(n) || n < 1) n = 1;
+      if (n > 999) n = 999;
+      state.repTarget = n;
+      render();
+    };
+    el.repSeg.appendChild(input);
   }
 
   // ---------- New render function for display notes toggle ----------
