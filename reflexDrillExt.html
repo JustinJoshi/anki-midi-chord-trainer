@@ -37,7 +37,7 @@
   .btn:active { transform: scale(0.97); }
   .seg { transition: all 0.15s ease; cursor: pointer; }
 
-  .wrap { width: 95%; max-width: 1800px; }
+  .wrap { width: 95%; max-width: 1800px; margin: 0 auto; }
 
   .header { margin-bottom: 18px; text-align: center; }
   .eyebrow {
@@ -80,6 +80,8 @@
   }
   #rootGroup, #qualityGroup { flex-basis: 100%; }
   .segmented, .root-grid { justify-content: center; }
+  .root-grid { width: 100%; }
+  #qualitySeg { width: 100%; }
   .control-label {
     font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em;
     text-transform: uppercase; color: #A79B85;
@@ -166,7 +168,7 @@
     display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center;
   }
 
-  .stats-row { display: flex; align-items: center; gap: 8px; margin-top: 20px; }
+  .stats-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: 20px; }
   .stat-box {
     flex: 1; min-width: 0; background: #1C1912; border: 1px solid #2c2820; border-radius: 14px;
     padding: 10px 6px; text-align: center;
@@ -203,20 +205,21 @@
     outline: none; border-color: #C9A227;
   }
 
-  /* Quality groups: label on the left, buttons flowing to the right */
+  /* Quality groups: centered rows, labels above each group */
   .quality-groups {
-    display: flex; flex-direction: column; gap: 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    width: 100%;
   }
   .quality-group {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
   }
   .quality-group-label {
     font-family: 'JetBrains Mono', monospace; font-size: 11px;
     letter-spacing: 0.08em; text-transform: uppercase; color: #A79B85;
-    min-width: 42px; flex-shrink: 0; text-align: right;
+    text-align: center;
   }
   .quality-group .segmented {
-    flex: 1; flex-wrap: wrap;
+    justify-content: center; flex-wrap: wrap;
   }
 
   .anki-sync-status {
