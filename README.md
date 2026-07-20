@@ -37,12 +37,19 @@ Best for **speed and muscle-memory drilling** on a single chord or chord family.
   - **Extended Family** — include 9ths, 11ths, and 13ths
 - Toggle **Show/Hide** chord notes if you want to test recognition vs. muscle memory.
 - **Anki Sync** — turn on "Follow card" and the app polls AnkiConnect for the current review card. When the card changes, the app parses the chord on the front (e.g. `Gm7`, `Cmaj7`, `F#m9(maj7)`) and automatically selects it for you.
-- **Automatic Timer** — when Anki Sync is following a card, a new card automatically triggers a 3-2-1 countdown and starts the drill hands-free.
+- **Automatic Timer** — when Anki Sync is following a card, a new card automatically triggers a countdown and starts the drill hands-free.
+  - The countdown length is editable (default 3 s) and persists across sessions.
+  - **Hide until go** masks the big chord symbol and the Anki Sync status line during the countdown, then reveals them the instant the timer starts.
+- **Break Before Grading** — after a round finishes, optionally wait a configurable number of seconds before flipping/grading the Anki card.
+  - Shows a visible "Grading in N…" countdown in the complete box.
+  - A bell toggle next to the break-seconds field enables or mutes the ticking sound during that countdown.
+  - Hitting **Redo**, **Next chord**, or **Stop** mid-break cancels the countdown so the app never grades a card you've already moved past.
 - **Auto-Grade** — when a round finishes, the app flips the Anki card and can automatically submit a grade based on your first-chord reaction time:
   - **Good** if under the "good" threshold (default 2.0 s)
   - **Hard** if under the "hard" threshold (default 4.0 s)
   - **Again** otherwise
-  - Thresholds are editable in seconds and persist across sessions; the Auto-Grade toggle itself resets to off on reload so it never silently grades cards.
+  - A persistent grade status badge next to the Auto-Grade toggle shows **No grade sent yet** → **Sending to Anki…** → **Last sent: Good (1.42 s)** and stays on screen until the next grade actually replaces it.
+  - Thresholds, break seconds, countdown seconds, and the break-countdown tick-sound preference all persist across sessions. The Auto-Grade, Automatic Timer, Hide-until-go, and Anki Sync toggles themselves reset to off on reload so nothing auto-grades or auto-hides silently.
 
 ### `progression-drill.html` — Progression Drill
 

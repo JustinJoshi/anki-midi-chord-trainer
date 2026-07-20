@@ -252,6 +252,15 @@
   .grade-pill-good  { color: #16140F; background: #7FA37A; border: 1px solid #7FA37A; }
   .grade-pill-hard  { color: #16140F; background: #E8CF7A; border: 1px solid #C9A227; }
   .grade-pill-again { color: #EDE6D6; background: #7a3a30; border: 1px solid #C1614A; }
+  .grade-pill-pending { color: #16140F; background: #A79B85; border: 1px solid #A79B85; }
+  .grade-pill-none    { color: #7A7156; background: #211E17; border: 1px solid #34301F; }
+
+  .break-countdown {
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #E8CF7A;
+  }
+
+  .tick-toggle-active { color: #E8CF7A !important; border-color: #C9A227 !important; background: #2A2510 !important; }
+  .tick-toggle-muted  { color: #7A7156 !important; border-color: #34301F !important; }
 
 
   .welcome-page { max-width: 760px; margin: 0 auto; padding: 64px 24px 80px; }
@@ -533,9 +542,34 @@
       </div>
 
       <!-- New control group: auto-starts the countdown/timer when Anki Sync loads a new card -->
-      <div class="control-group">
+      <div class="control-group" id="autoTimerGroup">
         <span class="control-label">Automatic Timer</span>
         <div class="segmented" id="autoTimerSeg"></div>
+        <div class="threshold-row">
+          <div class="threshold-field">
+            <span class="threshold-field-label">countdown</span>
+            <input type="number" class="rep-input" id="countdownSecondsInput" min="1" step="1" style="width:48px;">
+            <span class="threshold-field-label">s</span>
+          </div>
+          <div class="threshold-field">
+            <span class="threshold-field-label">hide until go</span>
+            <div class="segmented" id="hideChordSeg"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- New control group: pause between finishing a round and reporting the grade to Anki -->
+      <div class="control-group" id="breakTimerGroup">
+        <span class="control-label">Break Before Grading</span>
+        <div class="threshold-row">
+          <div class="threshold-field">
+            <input type="number" class="rep-input" id="breakSecondsInput" min="0" step="1" style="width:48px;">
+            <span class="threshold-field-label">s</span>
+          </div>
+          <button class="btn reset-btn" id="breakTickToggle" title="Toggle tick sound" style="padding:8px;">
+            <svg id="breakTickIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </button>
+        </div>
       </div>
 
       <!-- New control group: auto-grades the Anki card from the first-chord reaction time -->
@@ -554,6 +588,7 @@
             <span class="threshold-field-label">s</span>
           </div>
         </div>
+        <div class="grade-pill" id="gradeStatusBadge" style="display:none;"></div>
       </div>
     </div>
 
@@ -590,7 +625,7 @@
 
       <div class="complete-box" id="completeBox" style="display:none;">
         <div class="complete-text" id="completeText"></div>
-        <div class="grade-pill" id="gradePill" style="display:none;"></div>
+        <div class="break-countdown" id="breakCountdownEl" style="display:none;"></div>
         <div class="action-row">
           <button class="btn redo-btn" id="redoBtn">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
@@ -756,6 +791,14 @@
     autoGrade: false,
     gradeThresholds: { good: 2000, hard: 4000 }, // ms
     lastGradeResult: null, // { grade: "Good"|"Hard"|"Again", ms }
+    gradeStatus: "idle", // "idle" | "pending" | "sent" -- drives the persistent badge
+
+    countdownSeconds: 3,   // customizable auto-timer countdown length
+    hideChordUntilGo: false, // mask the chord readout while counting down
+
+    breakSeconds: 0,       // pause between finishing a round and reporting to Anki
+    breakTickSound: true,  // tick sound during the break countdown
+    breakRemaining: 0,
   };
 
   const heldSet = new Set();
@@ -764,6 +807,8 @@
   let audioCtx = null;
   let ankiPollId = null;
   let countdownIntervalId = null;
+  let breakIntervalId = null;
+  let breakCancelResolver = null;
 
   // ---------- Persistence ----------
   const STORAGE_KEY = "blocked-drill-midi-history";
@@ -795,12 +840,28 @@
             hard: Number(parsed.gradeThresholds.hard) || state.gradeThresholds.hard,
           };
         }
+        if (parsed) {
+          if (Number.isFinite(Number(parsed.breakSeconds)) && Number(parsed.breakSeconds) >= 0) {
+            state.breakSeconds = Number(parsed.breakSeconds);
+          }
+          if (Number.isFinite(Number(parsed.countdownSeconds)) && Number(parsed.countdownSeconds) >= 1) {
+            state.countdownSeconds = Number(parsed.countdownSeconds);
+          }
+          if (typeof parsed.breakTickSound === "boolean") {
+            state.breakTickSound = parsed.breakTickSound;
+          }
+        }
       }
     } catch (e) { /* fresh */ }
   }
   function saveSettings() {
     try {
-      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ gradeThresholds: state.gradeThresholds }));
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({
+        gradeThresholds: state.gradeThresholds,
+        breakSeconds: state.breakSeconds,
+        countdownSeconds: state.countdownSeconds,
+        breakTickSound: state.breakTickSound,
+      }));
     } catch (e) { /* ignore */ }
   }
   loadSettings();
@@ -983,12 +1044,12 @@
     if (state.autoTimer && state.midiConnected) startAutoCountdown();
   }
 
-  // ---------- Automatic Timer (3-2-1 countdown into startDrill) ----------
+  // ---------- Automatic Timer (customizable countdown into startDrill) ----------
   function startAutoCountdown() {
     cancelCountdown();
     state.justCompleted = false;
     state.phase = "countdown";
-    state.countdownValue = 3;
+    state.countdownValue = Math.max(1, Math.round(state.countdownSeconds || 3));
     state.running = true; // hides Start, shows Stop, so it can be cancelled
     render();
     playTick(880);
@@ -1192,11 +1253,55 @@
   }
   rafId = requestAnimationFrame(tick);
 
+  // Pauses for `state.breakSeconds` (with a visible ticking countdown) before
+  // finishRound() proceeds to flip and grade the Anki card. Resolves `true`
+  // if it ran to completion, `false` if cancelBreakCountdown() interrupted it
+  // (e.g. the user hit Redo/Next/Stop mid-break).
+  function runBreakCountdownIfAny() {
+    return new Promise((resolve) => {
+      if (!state.breakSeconds || state.breakSeconds <= 0) { resolve(true); return; }
+      breakCancelResolver = resolve;
+      state.breakRemaining = Math.round(state.breakSeconds);
+      render();
+      if (state.breakTickSound) playTick(660);
+
+      breakIntervalId = setInterval(() => {
+        state.breakRemaining -= 1;
+        if (state.breakRemaining <= 0) {
+          clearInterval(breakIntervalId);
+          breakIntervalId = null;
+          state.breakRemaining = 0;
+          breakCancelResolver = null;
+          render();
+          resolve(true);
+        } else {
+          if (state.breakTickSound) playTick(660);
+          render();
+        }
+      }, 1000);
+    });
+  }
+
+  function cancelBreakCountdown() {
+    if (breakIntervalId) {
+      clearInterval(breakIntervalId);
+      breakIntervalId = null;
+    }
+    state.breakRemaining = 0;
+    if (breakCancelResolver) {
+      const resolve = breakCancelResolver;
+      breakCancelResolver = null;
+      resolve(false);
+    }
+  }
+
   // ---------- Drill control ----------
   async function finishRound() {
     state.running = false;
     state.justCompleted = true;
-    state.lastGradeResult = null;
+    // NOTE: lastGradeResult is intentionally left untouched here — the
+    // previous grade keeps showing in the persistent badge until this round's
+    // own grade actually replaces it below.
     const times = state.repTimes;
     const avg = times.reduce((a, b) => a + b, 0) / times.length;
     const best = Math.min(...times);
@@ -1210,6 +1315,10 @@
     saveHistory();
     render();
 
+    // Optional pause before we report back to Anki at all.
+    const proceeded = await runBreakCountdownIfAny();
+    if (!proceeded) return; // cancelled mid-break — skip flip/grade entirely
+
     // TRIGGER ANKI FLIP HERE
     const flipped = await flipAnkiCard();
 
@@ -1217,12 +1326,17 @@
     // Anki card (Anki Sync on, a card was detected) so we never rate an
     // unrelated card that happens to be open in Anki's reviewer.
     if (flipped && state.autoGrade && state.ankiFollow && state.lastCardId) {
+      state.gradeStatus = "pending";
+      render();
       const result = gradeForTime(times[0]);
       const graded = await gradeAnkiCard(result.ease);
       if (graded) {
         state.lastGradeResult = { grade: result.label, ms: times[0] };
-        render();
+        state.gradeStatus = "sent";
+      } else {
+        state.gradeStatus = "idle";
       }
+      render();
     }
   }
 
@@ -1259,12 +1373,14 @@
 
   function stopDrill() {
     cancelCountdown();
+    cancelBreakCountdown();
     state.running = false;
     state.phase = "idle";
     render();
   }
 
   function nextChord() {
+    cancelBreakCountdown();
     state.justCompleted = false;
     state.repCount = 0;
     state.repTimes = [];
@@ -1275,6 +1391,7 @@
   }
 
   function redoChord() {
+    cancelBreakCountdown();
     state.justCompleted = false;
     state.repCount = 0;
     state.repTimes = [];
@@ -1305,12 +1422,19 @@
     ankiSyncSeg: document.getElementById("ankiSyncSeg"),
     ankiSyncStatus: document.getElementById("ankiSyncStatus"),
     autoTimerSeg: document.getElementById("autoTimerSeg"),
+    autoTimerGroup: document.getElementById("autoTimerGroup"),
+    countdownSecondsInput: document.getElementById("countdownSecondsInput"),
+    hideChordSeg: document.getElementById("hideChordSeg"),
+    breakTimerGroup: document.getElementById("breakTimerGroup"),
+    breakSecondsInput: document.getElementById("breakSecondsInput"),
+    breakTickToggle: document.getElementById("breakTickToggle"),
+    breakCountdownEl: document.getElementById("breakCountdownEl"),
     autoGradeGroup: document.getElementById("autoGradeGroup"),
     autoGradeSeg: document.getElementById("autoGradeSeg"),
     thresholdRow: document.getElementById("thresholdRow"),
     goodThresholdInput: document.getElementById("goodThresholdInput"),
     hardThresholdInput: document.getElementById("hardThresholdInput"),
-    gradePill: document.getElementById("gradePill"),
+    gradeStatusBadge: document.getElementById("gradeStatusBadge"),
     familyStrip: document.getElementById("familyStrip"),
     symbolEl: document.getElementById("symbolEl"),
     chordNotesEl: document.getElementById("chordNotesEl"),
@@ -1523,7 +1647,8 @@
       el.ankiSyncSeg.appendChild(btn);
     });
 
-    el.ankiSyncStatus.textContent = state.ankiSyncStatus;
+    const masked = state.hideChordUntilGo && state.phase === "countdown" && state.ankiSyncStatus.startsWith("Following:");
+    el.ankiSyncStatus.textContent = masked ? "Card loaded — hidden until go" : state.ankiSyncStatus;
     el.ankiSyncStatus.className = "anki-sync-status" +
       (state.ankiFollow && state.detectedChord ? " anki-sync-status-active" : "") +
       (state.ankiFollow && !state.detectedChord && state.ankiSyncStatus.includes("not reachable")
@@ -1545,7 +1670,56 @@
     });
     // Only meaningful while Anki Sync is following a card; keep visible but
     // visually de-emphasized otherwise rather than hiding it outright.
-    el.autoTimerSeg.style.opacity = state.ankiFollow ? "1" : "0.45";
+    el.autoTimerGroup.style.opacity = state.ankiFollow ? "1" : "0.45";
+
+    if (document.activeElement !== el.countdownSecondsInput) {
+      el.countdownSecondsInput.value = state.countdownSeconds;
+    }
+
+    el.hideChordSeg.innerHTML = "";
+    options.forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.className = "seg seg-btn" + (state.hideChordUntilGo === opt.value ? " seg-btn-active" : "");
+      btn.textContent = opt.label;
+      btn.onclick = () => { state.hideChordUntilGo = opt.value; render(); };
+      el.hideChordSeg.appendChild(btn);
+    });
+  }
+
+  function renderBreakTimerGroup() {
+    if (document.activeElement !== el.breakSecondsInput) {
+      el.breakSecondsInput.value = state.breakSeconds;
+    }
+    el.breakTickToggle.className = "btn reset-btn" + (state.breakTickSound ? " tick-toggle-active" : " tick-toggle-muted");
+    el.breakTickToggle.title = state.breakTickSound
+      ? "Tick sound on during break countdown (click to mute)"
+      : "Tick sound muted during break countdown (click to enable)";
+
+    if (state.breakRemaining > 0) {
+      el.breakCountdownEl.style.display = "block";
+      el.breakCountdownEl.textContent = `Grading in ${state.breakRemaining}…`;
+    } else {
+      el.breakCountdownEl.style.display = "none";
+    }
+  }
+
+  function renderGradeStatusBadge() {
+    if (!state.autoGrade) {
+      el.gradeStatusBadge.style.display = "none";
+      return;
+    }
+    el.gradeStatusBadge.style.display = "inline-flex";
+    if (state.gradeStatus === "pending") {
+      el.gradeStatusBadge.className = "grade-pill grade-pill-pending";
+      el.gradeStatusBadge.textContent = "Sending to Anki…";
+    } else if (state.lastGradeResult) {
+      const g = state.lastGradeResult;
+      el.gradeStatusBadge.className = "grade-pill grade-pill-" + g.grade.toLowerCase();
+      el.gradeStatusBadge.textContent = `Last sent: ${g.grade} (${(g.ms / 1000).toFixed(2)}s)`;
+    } else {
+      el.gradeStatusBadge.className = "grade-pill grade-pill-none";
+      el.gradeStatusBadge.textContent = "No grade sent yet";
+    }
   }
 
   function renderAutoGradeSeg() {
@@ -1592,10 +1766,11 @@
   }
 
   function renderChordCard() {
-    el.symbolEl.textContent = symbol();
-    el.chordNotesEl.textContent = chordNotes().join("  ·  ");
+    const masked = state.hideChordUntilGo && state.phase === "countdown";
+    el.symbolEl.textContent = masked ? "????" : symbol();
+    el.chordNotesEl.textContent = masked ? "" : chordNotes().join("  ·  ");
     // Toggle visibility based on state
-    el.chordNotesEl.style.visibility = state.showNotes ? "visible" : "hidden";
+    el.chordNotesEl.style.visibility = (!masked && state.showNotes) ? "visible" : "hidden";
   }
 
   function renderPhase() {
@@ -1665,15 +1840,6 @@
       const firstChord = state.repTimes[0];
       el.completeText.textContent = `${state.repTarget} reps — avg ${(avgSoFar / 1000).toFixed(2)}s, best ${(best / 1000).toFixed(2)}s, first chord ${(firstChord / 1000).toFixed(2)}s`;
       el.nextBtnText.textContent = (state.mode === "family" || state.mode === "extended") ? "Next in family" : "Next chord";
-
-      if (state.lastGradeResult) {
-        const g = state.lastGradeResult;
-        el.gradePill.style.display = "inline-flex";
-        el.gradePill.className = "grade-pill grade-pill-" + g.grade.toLowerCase();
-        el.gradePill.textContent = `Sent to Anki: ${g.grade} (${(g.ms / 1000).toFixed(2)}s)`;
-      } else {
-        el.gradePill.style.display = "none";
-      }
     } else {
       el.completeBox.style.display = "none";
     }
@@ -1710,7 +1876,9 @@
     renderShuffleBtn();
     renderAnkiSync();
     renderAutoTimerSeg();
+    renderBreakTimerGroup();
     renderAutoGradeSeg();
+    renderGradeStatusBadge();
     renderFamilyStrip();
     renderChordCard();
     renderPhase();
@@ -1745,6 +1913,26 @@
   }
   el.goodThresholdInput.onchange = () => commitThreshold("good", el.goodThresholdInput, 100);
   el.hardThresholdInput.onchange = () => commitThreshold("hard", el.hardThresholdInput, 200);
+
+  el.countdownSecondsInput.onchange = () => {
+    const v = parseFloat(el.countdownSecondsInput.value);
+    state.countdownSeconds = (isFinite(v) && v >= 1) ? Math.round(v) : 3;
+    saveSettings();
+    render();
+  };
+
+  el.breakSecondsInput.onchange = () => {
+    const v = parseFloat(el.breakSecondsInput.value);
+    state.breakSeconds = (isFinite(v) && v >= 0) ? Math.round(v) : 0;
+    saveSettings();
+    render();
+  };
+
+  el.breakTickToggle.onclick = () => {
+    state.breakTickSound = !state.breakTickSound;
+    saveSettings();
+    render();
+  };
 
   // ---------- Initial render ----------
   render();
