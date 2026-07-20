@@ -245,31 +245,107 @@ The script expects note names separated by commas or spaces. Supported syntax:
 
 ## Desktop / Taskbar Launchers
 
-You can create `.desktop` entries so these apps open from your app menu or taskbar like native programs.
+You can create `.desktop` entries so these apps open from your app menu or taskbar like native programs. The launcher scripts below start a local HTTP server, wait until it is actually serving the file, and then open the app in a new Firefox window so it is visible even if Firefox is already running.
 
-### Example launcher script
+### Reflex Drill launcher
+
+Save to `~/.local/bin/reflex-drill-launch`:
+
+```bash
+#!/bin/bash
+set -e
+
+DIR="/home/justin/reflex-drill"
+PORT=8766
+URL="http://127.0.0.1:$PORT/reflexDrillExt.html"
+LOG="/tmp/reflex-drill-launch.log"
+
+exec > >(tee -a "$LOG") 2>&1
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Launching Reflex Drill..."
+
+pkill -f "python3 -m http.server $PORT" 2>/dev/null || true
+sleep 0.2
+
+cd "$DIR"
+python3 -m http.server "$PORT" &
+SERVER_PID=$!
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Started server (PID $SERVER_PID) on port $PORT"
+
+READY=false
+for i in {1..50}; do
+  if curl -s -o /dev/null -w "%{http_code}" "$URL" | grep -q "^200$"; then
+    READY=true
+    break
+  fi
+  sleep 0.1
+done
+
+if [ "$READY" != "true" ]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: server did not become ready on $URL" >&2
+  exit 1
+fi
+
+firefox --new-window "$URL" &
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reflex Drill launched."
+```
+
+Create `~/.local/share/applications/reflex-drill.desktop`:
+
+```ini
+[Desktop Entry]
+Name=Reflex Drill
+Comment=Blocked Chord Drill — MIDI & Anki
+Exec=/home/justin/.local/bin/reflex-drill-launch
+Icon=reflex-drill
+Type=Application
+Categories=AudioVideo;Audio;Education;Music;
+StartupNotify=true
+Terminal=false
+```
+
+### Progression Drill launcher
 
 Save to `~/.local/bin/progression-drill-launch`:
 
 ```bash
 #!/bin/bash
+set -e
+
 DIR="/home/justin/reflex-drill"
 PORT=8767
+URL="http://127.0.0.1:$PORT/progression-drill.html"
+LOG="/tmp/progression-drill-launch.log"
 
-# Kill any existing server on this port
-pkill -f "python3 -m http.server $PORT" 2>/dev/null
+exec > >(tee -a "$LOG") 2>&1
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Launching Progression Drill..."
+
+pkill -f "python3 -m http.server $PORT" 2>/dev/null || true
 sleep 0.2
 
-# Start server
-cd "$DIR" || exit 1
-python3 -m http.server "$PORT" &>/dev/null &
-sleep 0.5
+cd "$DIR"
+python3 -m http.server "$PORT" &
+SERVER_PID=$!
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Started server (PID $SERVER_PID) on port $PORT"
 
-# Open Firefox
-firefox "http://127.0.0.1:$PORT/progression-drill.html" &
+READY=false
+for i in {1..50}; do
+  if curl -s -o /dev/null -w "%{http_code}" "$URL" | grep -q "^200$"; then
+    READY=true
+    break
+  fi
+  sleep 0.1
+done
+
+if [ "$READY" != "true" ]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: server did not become ready on $URL" >&2
+  exit 1
+fi
+
+firefox --new-window "$URL" &
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Progression Drill launched."
 ```
 
-Then create `~/.local/share/applications/progression-drill.desktop`:
+Create `~/.local/share/applications/progression-drill.desktop`:
 
 ```ini
 [Desktop Entry]
@@ -283,7 +359,14 @@ StartupNotify=true
 Terminal=false
 ```
 
-Run `update-desktop-database ~/.local/share/applications` to register it.
+Finally, register the entries:
+
+```bash
+chmod +x ~/.local/bin/reflex-drill-launch ~/.local/bin/progression-drill-launch
+update-desktop-database ~/.local/share/applications
+```
+
+If a launcher ever seems to do nothing, check its log file (`/tmp/reflex-drill-launch.log` or `/tmp/progression-drill-launch.log`) for the exact error.
 
 ## License
 
