@@ -10,7 +10,7 @@ A multi-tool setup for drilling chords and progressions on a MIDI keyboard with 
 
 | File | What it is |
 |------|-----------|
-| `reflexDrillExt.html` | Standalone web app — blocked-practice chord drill with timer, stats, and AnkiConnect flip |
+| `reflexDrillExt.html` | Standalone web app — blocked-practice chord drill with timer, stats, and AnkiConnect flip. Includes a **Welcome** tab with the landing page. |
 | `progression-drill.html` | Standalone web app — ii-V-I and 12-bar blues progression drill with loop timing |
 | `anki_midi_chord_trainer.py` | Python script — auto-checks your played chords against Anki cards during reviews |
 
@@ -25,6 +25,7 @@ All tools listen to your **MIDI keyboard**, but they serve different practice go
 Best for **speed and muscle-memory drilling** on a single chord or chord family.
 
 - Open it in any browser (served locally via `python3 -m http.server`).
+- Use the **Welcome** tab to read the landing page, or the **Tool** tab to use the drill.
 - Connect your MIDI keyboard and pick a chord (root + quality).
 - Press **Start**, lift your hands, then play the chord as fast as you can.
 - The timer starts the moment you release all keys and stops when you play the correct notes.
@@ -107,7 +108,7 @@ Both HTML apps need to be served locally for Web MIDI to work.
    python3 -m http.server 8766
    ```
 2. Open the app in your browser:
-   - Chord drill: `http://localhost:8766/reflexDrillExt.html`
+   - Chord drill (with Welcome + Tool tabs): `http://localhost:8766/reflexDrillExt.html`
    - Progression drill: `http://localhost:8766/progression-drill.html`
 3. Click **Connect MIDI Keyboard** and allow MIDI access when prompted.
 4. (Optional) Turn on **Anki Sync → Follow card** to have the app auto-select the chord shown on Anki's current card.
