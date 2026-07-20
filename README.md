@@ -245,7 +245,7 @@ The script expects note names separated by commas or spaces. Supported syntax:
 
 ## Desktop / Taskbar Launchers
 
-You can create `.desktop` entries so these apps open from your app menu or taskbar like native programs. The launcher scripts below start a local HTTP server, wait until it is actually serving the file, and then open the app in a new Firefox window so it is visible even if Firefox is already running.
+You can create `.desktop` entries so these apps open from your app menu or taskbar like native programs. The launcher scripts below start a local HTTP server, wait until it is actually serving the file, and then open the app in a new Firefox window with a cache-busting URL so Firefox always loads the latest version.
 
 ### Reflex Drill launcher
 
@@ -257,7 +257,9 @@ set -e
 
 DIR="/home/justin/reflex-drill"
 PORT=8766
-URL="http://127.0.0.1:$PORT/reflexDrillExt.html"
+CACHE_BUST=$(date +%s)
+BASE_URL="http://127.0.0.1:$PORT/reflexDrillExt.html"
+URL="$BASE_URL?v=$CACHE_BUST"
 LOG="/tmp/reflex-drill-launch.log"
 
 exec > >(tee -a "$LOG") 2>&1
@@ -313,7 +315,9 @@ set -e
 
 DIR="/home/justin/reflex-drill"
 PORT=8767
-URL="http://127.0.0.1:$PORT/progression-drill.html"
+CACHE_BUST=$(date +%s)
+BASE_URL="http://127.0.0.1:$PORT/progression-drill.html"
+URL="$BASE_URL?v=$CACHE_BUST"
 LOG="/tmp/progression-drill-launch.log"
 
 exec > >(tee -a "$LOG") 2>&1
