@@ -20,9 +20,31 @@
   .btn:active { transform: scale(0.97); }
   .seg { transition: all 0.15s ease; cursor: pointer; }
   select { cursor: pointer; }
+
+  /* Shared site navigation */
+  .tab-nav {
+    width: 95%; max-width: 1800px;
+    display: flex; justify-content: center; gap: 10px;
+    margin: 0 auto 18px;
+    padding-top: 32px;
+  }
+  .tab-btn {
+    background: #211E17; border: 1px solid #34301F; color: #A79B85;
+    border-radius: 999px; padding: 8px 18px; font-size: 13px;
+    font-family: 'Inter', sans-serif; font-weight: 500;
+    cursor: pointer; transition: all 0.15s ease;
+    text-decoration: none; display: inline-flex; align-items: center;
+  }
+  .tab-btn:hover { border-color: #4a4432; }
+  .tab-btn.active { background: #2A2510; border: 1px solid #C9A227; color: #E8CF7A; }
 </style>
 </head>
 <body>
+<nav class="tab-nav">
+  <a class="tab-btn" href="reflexDrillExt.html">Welcome</a>
+  <a class="tab-btn" href="reflexDrillExt.html">Chord Drill</a>
+  <a class="tab-btn active" href="progression-drill.html">Progression</a>
+</nav>
 <div id="root">
   <div style="color:#EDE6D6;font-family:sans-serif;padding:40px;text-align:center;">
     Loading… if this message doesn't go away, open your browser console (F12) and check for a red error.
@@ -516,7 +538,7 @@ function ProgressionDrill() {
 }
 
 const styles = {
-  page: { minHeight: "100vh", width: "100%", background: "#16140F", display: "flex", justifyContent: "center", padding: "32px 16px" },
+  page: { width: "100%", display: "flex", justifyContent: "center", padding: "0 16px 32px" },
   wrap: { width: "100%", maxWidth: 520 },
   header: { marginBottom: 18, textAlign: "center" },
   eyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", color: "#C9A227", marginBottom: 8 },

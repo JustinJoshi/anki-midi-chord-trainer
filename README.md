@@ -10,8 +10,8 @@ A multi-tool setup for drilling chords and progressions on a MIDI keyboard with 
 
 | File | What it is |
 |------|-----------|
-| `reflexDrillExt.html` | Standalone web app — blocked-practice chord drill with timer, stats, AnkiConnect flip, and optional time-based auto-grading. Includes a **Welcome** tab with the landing page. |
-| `progression-drill.html` | Standalone web app — ii-V-I and 12-bar blues progression drill with loop timing |
+| `reflexDrillExt.html` | Main web app — blocked-practice chord drill with timer, stats, AnkiConnect flip, and optional time-based auto-grading. Includes **Welcome** and **Chord Drill** tabs, plus a link to the Progression Drill. |
+| `progression-drill.html` | Companion web app — ii-V-I and 12-bar blues progression drill with loop timing. Shares the same top navigation bar so it feels like part of the same site. |
 | `anki_midi_chord_trainer.py` | Python script — auto-checks your played chords against Anki cards during reviews |
 
 ---
@@ -25,7 +25,7 @@ All tools listen to your **MIDI keyboard**, but they serve different practice go
 Best for **speed and muscle-memory drilling** on a single chord or chord family.
 
 - Open it in any browser (served locally via `python3 -m http.server`).
-- Use the **Welcome** tab to read the landing page, or the **Tool** tab to use the drill.
+- Use the **Welcome** tab to read the landing page, the **Chord Drill** tab to use the drill, or the **Progression** link to switch to the progression drill.
 - Connect your MIDI keyboard and pick a chord (root + quality).
 - Press **Start**, lift your hands, then play the chord as fast as you can.
 - The timer starts the moment you release all keys and stops when you play the correct notes.
@@ -48,7 +48,7 @@ Best for **speed and muscle-memory drilling** on a single chord or chord family.
 
 Best for **moving between chords smoothly** in a harmonic context, not just one chord at a time.
 
-- Open it in any browser (served locally via `python3 -m http.server`).
+- Open it from the **Progression** link in `reflexDrillExt.html`, or directly in any browser (served locally via `python3 -m http.server`).
 - Connect your MIDI keyboard and pick a **progression** and **key**:
   - **ii-V-I** — cycle through ii → V → I (e.g. Dm7 → G7 → Cmaj7 in C)
   - **12-Bar Blues** — standard blues form in the chosen key
@@ -113,9 +113,9 @@ Both HTML apps need to be served locally for Web MIDI to work.
    cd /path/to/this/repo
    python3 -m http.server 8766
    ```
-2. Open the app in your browser:
-   - Chord drill (with Welcome + Tool tabs): `http://localhost:8766/reflexDrillExt.html`
-   - Progression drill: `http://localhost:8766/progression-drill.html`
+2. Open the main app in your browser:
+   - `reflexDrillExt.html` has **Welcome**, **Chord Drill**, and a **Progression** link.
+   - You can also open the progression drill directly at `http://localhost:8766/progression-drill.html`; the same navigation bar links back to the main app.
 3. Click **Connect MIDI Keyboard** and allow MIDI access when prompted.
 4. (Optional) Turn on **Anki Sync → Follow card** to have the app auto-select the chord shown on Anki's current card.
 5. Select your settings and press **Start**.

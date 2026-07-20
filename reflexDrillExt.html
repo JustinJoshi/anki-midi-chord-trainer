@@ -19,6 +19,7 @@
     border-radius: 999px; padding: 8px 18px; font-size: 13px;
     font-family: 'Inter', sans-serif; font-weight: 500;
     cursor: pointer; transition: all 0.15s ease;
+    text-decoration: none; display: inline-flex; align-items: center;
   }
   .tab-btn:hover { border-color: #4a4432; }
   .tab-btn.active { background: #2A2510; border: 1px solid #C9A227; color: #E8CF7A; }
@@ -363,7 +364,8 @@
 <body>
   <nav class="tab-nav">
     <button class="tab-btn" data-tab="welcome">Welcome</button>
-    <button class="tab-btn active" data-tab="tool">Tool</button>
+    <button class="tab-btn active" data-tab="tool">Chord Drill</button>
+    <a class="tab-btn" href="progression-drill.html">Progression</a>
   </nav>
 
   <div id="tab-welcome" class="tab-panel">
@@ -1750,7 +1752,7 @@
 </script>
   <script>
   (function () {
-    const tabs = document.querySelectorAll('.tab-btn');
+    const tabs = document.querySelectorAll('.tab-btn[data-tab]');
     const panels = document.querySelectorAll('.tab-panel');
     function switchTab(name) {
       tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
