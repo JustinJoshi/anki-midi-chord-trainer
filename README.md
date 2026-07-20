@@ -10,7 +10,7 @@ A multi-tool setup for drilling chords and progressions on a MIDI keyboard with 
 
 | File | What it is |
 |------|-----------|
-| `reflexDrillExt.html` | Standalone web app — blocked-practice chord drill with timer, stats, and AnkiConnect flip. Includes a **Welcome** tab with the landing page. |
+| `reflexDrillExt.html` | Standalone web app — blocked-practice chord drill with timer, stats, AnkiConnect flip, and optional time-based auto-grading. Includes a **Welcome** tab with the landing page. |
 | `progression-drill.html` | Standalone web app — ii-V-I and 12-bar blues progression drill with loop timing |
 | `anki_midi_chord_trainer.py` | Python script — auto-checks your played chords against Anki cards during reviews |
 
@@ -37,6 +37,12 @@ Best for **speed and muscle-memory drilling** on a single chord or chord family.
   - **Extended Family** — include 9ths, 11ths, and 13ths
 - Toggle **Show/Hide** chord notes if you want to test recognition vs. muscle memory.
 - **Anki Sync** — turn on "Follow card" and the app polls AnkiConnect for the current review card. When the card changes, the app parses the chord on the front (e.g. `Gm7`, `Cmaj7`, `F#m9(maj7)`) and automatically selects it for you.
+- **Automatic Timer** — when Anki Sync is following a card, a new card automatically triggers a 3-2-1 countdown and starts the drill hands-free.
+- **Auto-Grade** — when a round finishes, the app flips the Anki card and can automatically submit a grade based on your first-chord reaction time:
+  - **Good** if under the "good" threshold (default 2.0 s)
+  - **Hard** if under the "hard" threshold (default 4.0 s)
+  - **Again** otherwise
+  - Thresholds are editable in seconds and persist across sessions; the Auto-Grade toggle itself resets to off on reload so it never silently grades cards.
 
 ### `progression-drill.html` — Progression Drill
 
@@ -191,8 +197,11 @@ The script uses `mido` to open your MIDI input port and polls for `note_on` / `n
 |--------|-------------|
 | `guiCurrentCard` | Fetches the card currently being reviewed |
 | `guiShowAnswer` | Flips the card to the answer side |
+| `guiAnswerCard` | Submits a grade (ease 1–4) for the revealed card |
 
-The script **does not** call `guiAnswerCard`. After the answer is revealed, you manually press `1`–`4` (or click the buttons) to grade the card as usual.
+The Python script **does not** call `guiAnswerCard`. After the answer is revealed, you manually press `1`–`4` (or click the buttons) to grade the card as usual.
+
+`reflexDrillExt.html` uses `guiAnswerCard` only when **Auto-Grade** is enabled and the drill is actively following a specific Anki card.
 
 ### Error reporting
 
