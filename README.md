@@ -2,6 +2,8 @@
 
 A multi-tool setup for drilling chords and progressions on a MIDI keyboard with Anki integration. Use the **HTML apps** for timed, repetitive practice sessions, or the **Python script** for hands-free Anki card reviews.
 
+**Live site (GitHub Pages):** https://justinjoshi.github.io/anki-midi-chord-trainer/
+
 ![Reflex Drill HTML App — top](./screenshot-1.png)
 
 ---
@@ -113,7 +115,7 @@ Best for **actual Anki review sessions** where you want the computer to check yo
 
 ## HTML App Setup
 
-Both HTML apps need to be served locally for Web MIDI to work.
+Both HTML apps need to be served locally for Web MIDI to work. You can also use the GitHub Pages deployment for a quick static view, but MIDI and AnkiConnect still require a local browser + Anki session.
 
 1. **Serve the files locally**:
    ```bash
