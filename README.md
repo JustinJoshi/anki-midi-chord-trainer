@@ -12,7 +12,7 @@ A multi-tool setup for drilling chords and progressions on a MIDI keyboard with 
 
 | File | What it is |
 |------|-----------|
-| `reflexDrillExt.html` | Main web app — blocked-practice chord drill with timer, stats, AnkiConnect flip, and optional time-based auto-grading. Includes **Welcome** and **Chord Drill** tabs, plus a link to the Progression Drill. |
+| `reflexDrillExt.html` | Main web app — blocked-practice chord drill with timer, stats, AnkiConnect flip, and optional time-based auto-grading. Includes **Welcome**, **Chord Drill**, and **Tracking** tabs, plus a link to the Progression Drill. |
 | `progression-drill.html` | Companion web app — ii-V-I and 12-bar blues progression drill with loop timing. Shares the same top navigation bar so it feels like part of the same site. |
 | `anki_midi_chord_trainer.py` | Python script — auto-checks your played chords against Anki cards during reviews |
 
@@ -52,6 +52,14 @@ Best for **speed and muscle-memory drilling** on a single chord or chord family.
   - **Again** otherwise
   - A persistent grade status badge next to the Auto-Grade toggle shows **No grade sent yet** → **Sending to Anki…** → **Last sent: Good (1.42 s)** and stays on screen until the next grade actually replaces it.
   - Thresholds, break seconds, countdown seconds, and the break-countdown tick-sound preference all persist across sessions. The Auto-Grade, Automatic Timer, Hide-until-go, and Anki Sync toggles themselves reset to off on reload so nothing auto-grades or auto-hides silently.
+- **Tracking tab** — every first-chord attempt is logged to a separate localStorage key so you can visualize progress over time, without disturbing the rolling-best stats:
+  - Each log entry stores the chord symbol, reaction time, timestamp, redo flag, and (once known) the Anki grade.
+  - Grades are patched onto the entry **after** the round completes and Auto-Grade succeeds; attempts without Auto-Grade stay "ungraded".
+  - Redo attempts count, but render as hollow rings so you can distinguish them from first tries.
+  - Click any chord in the left-hand list to see an SVG time-series chart of every attempt, colored by grade.
+  - The chart shows a connecting trend line, hover tooltips with exact time/date/grade, and faint dashed reference lines at your current Good/Hard thresholds.
+  - Logs are capped at the most recent 5,000 entries to keep localStorage healthy.
+  - Use **Clear this chord's log** to remove entries for the selected chord.
 
 ### `progression-drill.html` — Progression Drill
 
@@ -123,7 +131,7 @@ Both HTML apps need to be served locally for Web MIDI to work. You can also use 
    python3 -m http.server 8766
    ```
 2. Open the main app in your browser:
-   - `reflexDrillExt.html` has **Welcome**, **Chord Drill**, and a **Progression** link.
+   - `reflexDrillExt.html` has **Welcome**, **Chord Drill**, **Tracking**, and a **Progression** link.
    - You can also open the progression drill directly at `http://localhost:8766/progression-drill.html`; the same navigation bar links back to the main app.
 3. Click **Connect MIDI Keyboard** and allow MIDI access when prompted.
 4. (Optional) Turn on **Anki Sync → Follow card** to have the app auto-select the chord shown on Anki's current card.
