@@ -299,6 +299,61 @@
   }
   .tracking-clear-btn:hover { border-color: #C1614A; color: #C1614A; }
 
+  /* ---------- Sub-tabs (inside Tracking) ---------- */
+  .sub-tab-nav { display: flex; gap: 8px; margin-bottom: 18px; }
+  .sub-tab-btn {
+    background: #211E17; border: 1px solid #34301F; color: #A79B85;
+    border-radius: 999px; padding: 6px 14px; font-size: 12.5px;
+    font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer;
+  }
+  .sub-tab-btn.active { background: #2A2510; border: 1px solid #C9A227; color: #E8CF7A; }
+  .sub-tab-panel { display: none; }
+  .sub-tab-panel.active { display: block; }
+
+  /* ---------- Arpeggio drill ---------- */
+  .arp-lh-row {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #7A7156;
+    margin-bottom: 6px;
+  }
+  .arp-target-wrap { text-align: center; margin: 14px 0; }
+  .arp-target-note {
+    font-family: 'Fraunces', serif; font-weight: 650; font-size: 56px;
+    color: #EDE6D6; line-height: 1.1; transition: color 0.15s ease;
+  }
+  .arp-target-note.arp-flash { color: #C1614A; }
+  .arp-cell-strip { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 6px; }
+  .arp-cell-chip {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px 10px;
+    border-radius: 999px; border: 1px solid #34301F; color: #7A7156; background: #211E17;
+  }
+  .arp-cell-chip.arp-cell-current { border-color: #C9A227; color: #E8CF7A; background: #2A2510; }
+  .arp-cell-chip.arp-cell-done { color: #4a4432; }
+  .arp-history {
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #7A7156;
+    text-align: center; line-height: 1.7; max-width: 640px;
+  }
+  .arp-customize-list { display: flex; flex-direction: column; gap: 6px; }
+  .arp-customize-row {
+    display: flex; align-items: center; gap: 10px; background: #211E17;
+    border: 1px solid #34301F; border-radius: 12px; padding: 8px 12px;
+  }
+  .arp-customize-row.arp-excluded { opacity: 0.45; }
+  .arp-customize-name {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #EDE6D6; flex: 1;
+  }
+  .arp-order-btn {
+    background: #16140F; border: 1px solid #34301F; color: #A79B85;
+    border-radius: 8px; width: 26px; height: 26px; font-size: 12px; cursor: pointer;
+  }
+  .arp-order-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .arp-miss-breakdown {
+    font-family: 'Inter', sans-serif; font-size: 12.5px; color: #A79B85;
+    margin-top: 12px; line-height: 1.6;
+  }
+  .arp-miss-count-badge {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #C1614A;
+  }
+
 
   .welcome-page { max-width: 760px; margin: 0 auto; padding: 64px 24px 80px; }
 
@@ -411,6 +466,7 @@
   <nav class="tab-nav">
     <button class="tab-btn" data-tab="welcome">Welcome</button>
     <button class="tab-btn active" data-tab="tool">Chord Drill</button>
+    <button class="tab-btn" data-tab="arpeggios">Arpeggios</button>
     <button class="tab-btn" data-tab="tracking">Tracking</button>
     <a class="tab-btn" href="progression-drill.html">Progression</a>
   </nav>
@@ -705,30 +761,120 @@
   </div>
   </div>
 
+  <div id="tab-arpeggios" class="tab-panel">
+  <div class="wrap">
+    <div class="header">
+      <div class="eyebrow">novu jazz academy pattern — root/5 pedal, 7-note RH cell</div>
+      <h1 class="title">Minor 11th Arpeggio Sequence</h1>
+    </div>
+
+    <div class="controls-row">
+      <div class="control-group">
+        <span class="control-label">Flash on Miss</span>
+        <div class="segmented" id="arpFlashSeg"></div>
+      </div>
+      <div class="control-group">
+        <span class="control-label">Sequence</span>
+        <button class="btn reset-btn" id="arpCustomizeBtn" style="width:auto;padding:8px 16px;border-radius:999px;">Customize chords &amp; order</button>
+      </div>
+    </div>
+
+    <div class="card" id="arpCustomizeCard" style="display:none; align-items:stretch; margin-bottom:18px;">
+      <div class="arp-customize-list" id="arpCustomizeList"></div>
+      <div style="display:flex; gap:10px; justify-content:center; margin-top:10px;">
+        <button class="btn reset-btn" id="arpResetOrderBtn" style="width:auto;padding:8px 16px;border-radius:999px;">Reset to default order</button>
+        <button class="btn reset-btn" id="arpCustomizeDoneBtn" style="width:auto;padding:8px 16px;border-radius:999px;">Done</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow" id="arpChordProgress">chord 1 of 12</div>
+      <div class="title" id="arpChordName" style="font-size:32px;">Bbm11</div>
+      <div class="arp-lh-row" id="arpLhRow"></div>
+
+      <div class="arp-target-wrap" id="arpTargetWrap">
+        <div class="eyebrow" id="arpTargetLabel">play the root + 5th to begin</div>
+        <div class="arp-target-note" id="arpTargetNote">Bb + F</div>
+      </div>
+
+      <div class="arp-cell-strip" id="arpCellStrip"></div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-value" id="arpLiveTimer">—</div>
+          <div class="stat-label">since last note</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="arpLapCount">0</div>
+          <div class="stat-label">laps this chord</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="arpMissCount">0</div>
+          <div class="stat-label">misses this chord</div>
+        </div>
+      </div>
+
+      <div class="arp-history" id="arpHistory"></div>
+
+      <div class="action-row">
+        <button class="btn reset-btn" id="arpRestartBtn" style="width:auto;padding:10px 18px;border-radius:999px;">Restart chord</button>
+        <button class="btn start-btn" id="arpNextBtn" style="width:auto;padding:10px 18px;">Next chord →</button>
+      </div>
+    </div>
+  </div>
+  </div>
+
   <div id="tab-tracking" class="tab-panel">
   <div class="wrap">
     <div class="header">
-      <div class="eyebrow">first-chord reaction time, per chord, over time</div>
+      <div class="eyebrow">reaction time and accuracy, over time</div>
       <h1 class="title">Tracking</h1>
     </div>
-    <div class="tracking-wrap">
-      <div class="tracking-list-card" id="trackingList"></div>
-      <div class="tracking-chart-card">
-        <h2 class="tracking-chart-title" id="trackingChartTitle">—</h2>
-        <p class="tracking-chart-sub" id="trackingChartSub"></p>
-        <div style="position:relative;">
-          <svg id="trackingChartSvg" width="100%" viewBox="0 0 720 320" style="display:block;"></svg>
-          <div class="tracking-tooltip" id="trackingTooltip"></div>
+
+    <div class="sub-tab-nav">
+      <button class="sub-tab-btn active" data-subtab="chords">Chord Drill</button>
+      <button class="sub-tab-btn" data-subtab="arpeggios">Arpeggios</button>
+    </div>
+
+    <div id="subtab-chords" class="sub-tab-panel active">
+      <div class="tracking-wrap">
+        <div class="tracking-list-card" id="trackingList"></div>
+        <div class="tracking-chart-card">
+          <h2 class="tracking-chart-title" id="trackingChartTitle">—</h2>
+          <p class="tracking-chart-sub" id="trackingChartSub"></p>
+          <div style="position:relative;">
+            <svg id="trackingChartSvg" width="100%" viewBox="0 0 720 320" style="display:block;"></svg>
+            <div class="tracking-tooltip" id="trackingTooltip"></div>
+          </div>
+          <div class="tracking-legend">
+            <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#C1614A;"></span>Again</span>
+            <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#E8CF7A;"></span>Hard</span>
+            <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#7FA37A;"></span>Good</span>
+            <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#6FA9A3;"></span>Easy</span>
+            <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#5c5646;"></span>Ungraded</span>
+            <span class="tracking-legend-item">◎ hollow ring = redo attempt</span>
+          </div>
+          <button class="tracking-clear-btn" id="trackingClearBtn">Clear this chord's log</button>
         </div>
-        <div class="tracking-legend">
-          <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#C1614A;"></span>Again</span>
-          <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#E8CF7A;"></span>Hard</span>
-          <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#7FA37A;"></span>Good</span>
-          <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#6FA9A3;"></span>Easy</span>
-          <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#5c5646;"></span>Ungraded</span>
-          <span class="tracking-legend-item">◎ hollow ring = redo attempt</span>
+      </div>
+    </div>
+
+    <div id="subtab-arpeggios" class="sub-tab-panel">
+      <div class="tracking-wrap">
+        <div class="tracking-list-card" id="arpTrackingList"></div>
+        <div class="tracking-chart-card">
+          <h2 class="tracking-chart-title" id="arpChartTitle">—</h2>
+          <p class="tracking-chart-sub" id="arpChartSub"></p>
+          <div style="position:relative;">
+            <svg id="arpChartSvg" width="100%" viewBox="0 0 720 320" style="display:block;"></svg>
+            <div class="tracking-tooltip" id="arpTooltip"></div>
+          </div>
+          <div class="tracking-legend">
+            <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#C9A227;"></span>Transition time</span>
+          </div>
+          <div class="arp-miss-breakdown" id="arpMissBreakdown"></div>
+          <button class="tracking-clear-btn" id="arpTrackingClearBtn">Clear this transition's log</button>
         </div>
-        <button class="tracking-clear-btn" id="trackingClearBtn">Clear this chord's log</button>
       </div>
     </div>
   </div>
@@ -1289,6 +1435,14 @@
     const command = status & 0xf0;
     const isNoteOn = command === 0x90 && velocity > 0;
     const isNoteOff = command === 0x80 || (command === 0x90 && velocity === 0);
+
+    // Broadcast raw note events so other tabs (Arpeggios) can share this one
+    // MIDI connection instead of requiring their own "Connect MIDI" step.
+    if (isNoteOn) {
+      window.dispatchEvent(new CustomEvent("midi-note-on", { detail: { note, pc: note % 12 } }));
+    } else if (isNoteOff) {
+      window.dispatchEvent(new CustomEvent("midi-note-off", { detail: { note, pc: note % 12 } }));
+    }
 
     if (isNoteOn) heldSet.add(note);
     else if (isNoteOff) heldSet.delete(note);
@@ -2057,9 +2211,21 @@
       tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
       panels.forEach((p) => p.classList.toggle('active', p.id === 'tab-' + name));
       if (name === 'tracking') renderTracking();
+      if (typeof window.onArpTabVisibility === "function") window.onArpTabVisibility(name === "arpeggios");
     }
     tabs.forEach((t) => t.addEventListener('click', () => switchTab(t.dataset.tab)));
     window.switchToToolTab = function () { switchTab('tool'); };
+
+    // ---------- Tracking sub-tabs (Chord Drill / Arpeggios) ----------
+    const subTabs = document.querySelectorAll('.sub-tab-btn[data-subtab]');
+    const subPanels = document.querySelectorAll('.sub-tab-panel');
+    function switchSubTab(name) {
+      subTabs.forEach((t) => t.classList.toggle('active', t.dataset.subtab === name));
+      subPanels.forEach((p) => p.classList.toggle('active', p.id === 'subtab-' + name));
+      if (name === 'chords') renderTracking();
+      if (name === 'arpeggios' && typeof window.renderArpeggioTracking === "function") window.renderArpeggioTracking();
+    }
+    subTabs.forEach((t) => t.addEventListener('click', () => switchSubTab(t.dataset.subtab)));
 
     // ---------- Tracking tab ----------
     // Reads the same localStorage log the drill writes to. Deliberately
@@ -2227,6 +2393,538 @@
       selectedChord = null;
       renderTracking();
     });
+  })();
+  </script>
+
+  <script>
+  (function () {
+    // ---------- Data: the 12-chord minor 11th arpeggio sequence ----------
+    // pc = pitch class 0-11 (C=0 ... B=11), used for MIDI matching.
+    // name = display spelling exactly as given (Cb kept as written for Abm11).
+    const ARPEGGIO_CHORDS = [
+      { id: "Bbm11", lh: [{ name: "Bb", pc: 10 }, { name: "F", pc: 5 }], rh: [
+        { name: "C", pc: 0, deg: "9" }, { name: "Db", pc: 1, deg: "b3" }, { name: "Eb", pc: 3, deg: "11" },
+        { name: "F", pc: 5, deg: "5" }, { name: "Ab", pc: 8, deg: "b7" }, { name: "C", pc: 0, deg: "9" }, { name: "Eb", pc: 3, deg: "11" },
+      ]},
+      { id: "Fm11", lh: [{ name: "F", pc: 5 }, { name: "C", pc: 0 }], rh: [
+        { name: "G", pc: 7, deg: "9" }, { name: "Ab", pc: 8, deg: "b3" }, { name: "Bb", pc: 10, deg: "11" },
+        { name: "C", pc: 0, deg: "5" }, { name: "Eb", pc: 3, deg: "b7" }, { name: "G", pc: 7, deg: "9" }, { name: "Bb", pc: 10, deg: "11" },
+      ]},
+      { id: "Abm11", lh: [{ name: "Ab", pc: 8 }, { name: "Eb", pc: 3 }], rh: [
+        { name: "Bb", pc: 10, deg: "9" }, { name: "Cb", pc: 11, deg: "b3" }, { name: "Db", pc: 1, deg: "11" },
+        { name: "Eb", pc: 3, deg: "5" }, { name: "Gb", pc: 6, deg: "b7" }, { name: "Bb", pc: 10, deg: "9" }, { name: "Db", pc: 1, deg: "11" },
+      ]},
+      { id: "Ebm11", lh: [{ name: "Eb", pc: 3 }, { name: "Bb", pc: 10 }], rh: [
+        { name: "F", pc: 5, deg: "9" }, { name: "Gb", pc: 6, deg: "b3" }, { name: "Ab", pc: 8, deg: "11" },
+        { name: "Bb", pc: 10, deg: "5" }, { name: "Db", pc: 1, deg: "b7" }, { name: "F", pc: 5, deg: "9" }, { name: "Ab", pc: 8, deg: "11" },
+      ]},
+      { id: "F#m11", lh: [{ name: "F#", pc: 6 }, { name: "C#", pc: 1 }], rh: [
+        { name: "G#", pc: 8, deg: "9" }, { name: "A", pc: 9, deg: "b3" }, { name: "B", pc: 11, deg: "11" },
+        { name: "C#", pc: 1, deg: "5" }, { name: "E", pc: 4, deg: "b7" }, { name: "G#", pc: 8, deg: "9" }, { name: "B", pc: 11, deg: "11" },
+      ]},
+      { id: "C#m11", lh: [{ name: "C#", pc: 1 }, { name: "G#", pc: 8 }], rh: [
+        { name: "D#", pc: 3, deg: "9" }, { name: "E", pc: 4, deg: "b3" }, { name: "F#", pc: 6, deg: "11" },
+        { name: "G#", pc: 8, deg: "5" }, { name: "B", pc: 11, deg: "b7" }, { name: "D#", pc: 3, deg: "9" }, { name: "F#", pc: 6, deg: "11" },
+      ]},
+      { id: "Em11", lh: [{ name: "E", pc: 4 }, { name: "B", pc: 11 }], rh: [
+        { name: "F#", pc: 6, deg: "9" }, { name: "G", pc: 7, deg: "b3" }, { name: "A", pc: 9, deg: "11" },
+        { name: "B", pc: 11, deg: "5" }, { name: "D", pc: 2, deg: "b7" }, { name: "F#", pc: 6, deg: "9" }, { name: "A", pc: 9, deg: "11" },
+      ]},
+      { id: "Bm11", lh: [{ name: "B", pc: 11 }, { name: "F#", pc: 6 }], rh: [
+        { name: "C#", pc: 1, deg: "9" }, { name: "D", pc: 2, deg: "b3" }, { name: "E", pc: 4, deg: "11" },
+        { name: "F#", pc: 6, deg: "5" }, { name: "A", pc: 9, deg: "b7" }, { name: "C#", pc: 1, deg: "9" }, { name: "E", pc: 4, deg: "11" },
+      ]},
+      { id: "Dm11", lh: [{ name: "D", pc: 2 }, { name: "A", pc: 9 }], rh: [
+        { name: "E", pc: 4, deg: "9" }, { name: "F", pc: 5, deg: "b3" }, { name: "G", pc: 7, deg: "11" },
+        { name: "A", pc: 9, deg: "5" }, { name: "C", pc: 0, deg: "b7" }, { name: "E", pc: 4, deg: "9" }, { name: "G", pc: 7, deg: "11" },
+      ]},
+      { id: "Am11", lh: [{ name: "A", pc: 9 }, { name: "E", pc: 4 }], rh: [
+        { name: "B", pc: 11, deg: "9" }, { name: "C", pc: 0, deg: "b3" }, { name: "D", pc: 2, deg: "11" },
+        { name: "E", pc: 4, deg: "5" }, { name: "G", pc: 7, deg: "b7" }, { name: "B", pc: 11, deg: "9" }, { name: "D", pc: 2, deg: "11" },
+      ]},
+      { id: "Cm11", lh: [{ name: "C", pc: 0 }, { name: "G", pc: 7 }], rh: [
+        { name: "D", pc: 2, deg: "9" }, { name: "Eb", pc: 3, deg: "b3" }, { name: "F", pc: 5, deg: "11" },
+        { name: "G", pc: 7, deg: "5" }, { name: "Bb", pc: 10, deg: "b7" }, { name: "D", pc: 2, deg: "9" }, { name: "F", pc: 5, deg: "11" },
+      ]},
+      { id: "Gm11", lh: [{ name: "G", pc: 7 }, { name: "D", pc: 2 }], rh: [
+        { name: "A", pc: 9, deg: "9" }, { name: "Bb", pc: 10, deg: "b3" }, { name: "C", pc: 0, deg: "11" },
+        { name: "D", pc: 2, deg: "5" }, { name: "F", pc: 5, deg: "b7" }, { name: "A", pc: 9, deg: "9" }, { name: "C", pc: 0, deg: "11" },
+      ]},
+    ];
+    const DEFAULT_ORDER = ARPEGGIO_CHORDS.map((c) => c.id);
+    const chordById = {};
+    ARPEGGIO_CHORDS.forEach((c) => { chordById[c.id] = c; });
+
+    // ---------- Persistence ----------
+    const SEQ_KEY = "blocked-drill-arpeggio-sequence";
+    const FLASH_KEY = "blocked-drill-arpeggio-flash";
+    const LOG_KEY = "blocked-drill-arpeggio-log";
+    const MISS_LOG_KEY = "blocked-drill-arpeggio-miss-log";
+    const LOG_MAX = 5000;
+
+    function loadSeqConfig() {
+      try {
+        const raw = localStorage.getItem(SEQ_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.order) && parsed.order.length === DEFAULT_ORDER.length) {
+            return { order: parsed.order, excluded: Array.isArray(parsed.excluded) ? parsed.excluded : [] };
+          }
+        }
+      } catch (e) { /* fresh */ }
+      return { order: DEFAULT_ORDER.slice(), excluded: [] };
+    }
+    function saveSeqConfig() {
+      try { localStorage.setItem(SEQ_KEY, JSON.stringify(seqConfig)); } catch (e) { /* ignore */ }
+    }
+    function loadFlashPref() {
+      try { const raw = localStorage.getItem(FLASH_KEY); return raw === null ? true : raw === "1"; }
+      catch (e) { return true; }
+    }
+    function saveFlashPref() {
+      try { localStorage.setItem(FLASH_KEY, flashOnMiss ? "1" : "0"); } catch (e) { /* ignore */ }
+    }
+    function loadLog(key) {
+      try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : []; }
+      catch (e) { return []; }
+    }
+    function saveLog(key, log) {
+      try {
+        const trimmed = log.length > LOG_MAX ? log.slice(log.length - LOG_MAX) : log;
+        localStorage.setItem(key, JSON.stringify(trimmed));
+      } catch (e) { /* ignore */ }
+    }
+    function logTransition(chordId, fromDeg, toDeg, ms) {
+      const log = loadLog(LOG_KEY);
+      log.push({ chord: chordId, fromDeg, toDeg, ms: Math.round(ms), ts: Date.now() });
+      saveLog(LOG_KEY, log);
+    }
+    function logMiss(chordId, fromDeg, toDeg, playedName) {
+      const log = loadLog(MISS_LOG_KEY);
+      log.push({ chord: chordId, fromDeg, toDeg, played: playedName, ts: Date.now() });
+      saveLog(MISS_LOG_KEY, log);
+    }
+
+    // ---------- Live drill state ----------
+    let seqConfig = loadSeqConfig();
+    let flashOnMiss = loadFlashPref();
+    let chordIdx = 0;
+    let phase = "idle"; // idle | awaiting-root | sequence
+    let targetIdx = 0;
+    let lastEventTime = null;
+    let lapCount = 0;
+    let missCount = 0;
+    let recentHistory = [];
+    let arpTabActive = false;
+    let liveTimerInterval = null;
+    let customizeOpen = false;
+
+    const heldPcCounts = new Map();
+    function noteOnPc(pc) { heldPcCounts.set(pc, (heldPcCounts.get(pc) || 0) + 1); }
+    function noteOffPc(pc) {
+      const c = (heldPcCounts.get(pc) || 0) - 1;
+      if (c <= 0) heldPcCounts.delete(pc); else heldPcCounts.set(pc, c);
+    }
+    function isPcHeld(pc) { return heldPcCounts.has(pc); }
+
+    function activeSequence() {
+      return seqConfig.order.filter((id) => !seqConfig.excluded.includes(id));
+    }
+    function currentChord() {
+      const seq = activeSequence();
+      if (!seq.length) return null;
+      return chordById[seq[chordIdx % seq.length]];
+    }
+
+    let sinceArmFirstNote = true; // true only until the very first note of a chord is matched
+
+    function armChord() {
+      phase = "awaiting-root";
+      targetIdx = 0;
+      lastEventTime = null;
+      lapCount = 0;
+      missCount = 0;
+      recentHistory = [];
+      sinceArmFirstNote = true;
+      renderArpTab();
+    }
+
+    // The "from" label for whichever transition is currently in progress:
+    // "Root" only for the very first note played since arming, otherwise the
+    // degree of whatever note was actually played previously -- including
+    // across a lap wraparound (e.g. the last note "11" looping back into "9",
+    // which must read "11->9", not "Root->9").
+    function currentFromLabel(chord) {
+      if (sinceArmFirstNote) return "Root";
+      return chord.rh[(targetIdx - 1 + chord.rh.length) % chord.rh.length].deg;
+    }
+
+    function handleArpNoteOn(pc) {
+      if (!arpTabActive || phase === "idle") return;
+      const chord = currentChord();
+      if (!chord) return;
+
+      if (phase === "awaiting-root") {
+        if (isPcHeld(chord.lh[0].pc) && isPcHeld(chord.lh[1].pc)) {
+          phase = "sequence";
+          targetIdx = 0;
+          lastEventTime = performance.now();
+          renderArpTab();
+        }
+        return;
+      }
+
+      if (phase === "sequence") {
+        const target = chord.rh[targetIdx];
+        if (pc === target.pc) {
+          const now = performance.now();
+          const elapsed = lastEventTime ? now - lastEventTime : 0;
+          const fromLabel = currentFromLabel(chord);
+          logTransition(chord.id, fromLabel, target.deg, elapsed);
+          recentHistory = [...recentHistory, { from: fromLabel, to: target.deg, ms: elapsed }].slice(-6);
+          lastEventTime = now;
+          sinceArmFirstNote = false;
+          targetIdx = (targetIdx + 1) % chord.rh.length;
+          if (targetIdx === 0) lapCount += 1;
+          renderArpTab();
+        } else {
+          missCount += 1;
+          const fromLabel = currentFromLabel(chord);
+          const playedName = noteNameForPc(pc);
+          logMiss(chord.id, fromLabel, target.deg, playedName);
+          if (flashOnMiss) flashTarget();
+          renderArpLiveStats();
+        }
+      }
+    }
+
+    // Simple sharp-spelled note namer for miss logging (matching purposes
+    // only care about pitch class; exact enharmonic spelling of a wrong note
+    // isn't music-theory-critical the way the sequence itself is).
+    const SHARP_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    function noteNameForPc(pc) { return SHARP_NAMES[((pc % 12) + 12) % 12]; }
+
+    window.addEventListener("midi-note-on", (ev) => {
+      noteOnPc(ev.detail.pc);
+      handleArpNoteOn(ev.detail.pc);
+    });
+    window.addEventListener("midi-note-off", (ev) => { noteOffPc(ev.detail.pc); });
+
+    function flashTarget() {
+      const el = document.getElementById("arpTargetNote");
+      if (!el) return;
+      el.classList.add("arp-flash");
+      setTimeout(() => el.classList.remove("arp-flash"), 260);
+    }
+
+    // ---------- Render: drill ----------
+    function renderArpTab() {
+      const seq = activeSequence();
+      const chord = currentChord();
+      const progressEl = document.getElementById("arpChordProgress");
+      const nameEl = document.getElementById("arpChordName");
+      const lhEl = document.getElementById("arpLhRow");
+      const labelEl = document.getElementById("arpTargetLabel");
+      const noteEl = document.getElementById("arpTargetNote");
+      const stripEl = document.getElementById("arpCellStrip");
+      const historyEl = document.getElementById("arpHistory");
+
+      if (!chord) {
+        progressEl.textContent = "no chords selected";
+        nameEl.textContent = "—";
+        lhEl.textContent = "";
+        labelEl.textContent = "use \u201cCustomize chords & order\u201d to include at least one";
+        noteEl.textContent = "—";
+        stripEl.innerHTML = "";
+        historyEl.textContent = "";
+        renderArpLiveStats();
+        return;
+      }
+
+      progressEl.textContent = "chord " + ((chordIdx % seq.length) + 1) + " of " + seq.length;
+      nameEl.textContent = chord.id;
+      lhEl.textContent = "LH pedal (hold): " + chord.lh[0].name + " + " + chord.lh[1].name;
+
+      if (phase === "sequence") {
+        const target = chord.rh[targetIdx];
+        labelEl.textContent = "next (" + target.deg + ")";
+        noteEl.textContent = target.name;
+      } else {
+        labelEl.textContent = "play the root + 5th to begin";
+        noteEl.textContent = chord.lh[0].name + " + " + chord.lh[1].name;
+      }
+
+      stripEl.innerHTML = chord.rh.map((n, i) => {
+        let cls = "arp-cell-chip";
+        if (phase === "sequence" && i === targetIdx) cls += " arp-cell-current";
+        else if (phase === "sequence" && i < targetIdx) cls += " arp-cell-done";
+        return '<span class="' + cls + '">' + n.deg + " " + n.name + "</span>";
+      }).join("");
+
+      historyEl.textContent = recentHistory.length
+        ? recentHistory.map((h) => h.from + "\u2192" + h.to + " " + (h.ms / 1000).toFixed(2) + "s").join("  \u00b7  ")
+        : "play the pedal, then the sequence, to see transition times here";
+
+      renderArpLiveStats();
+    }
+
+    function renderArpLiveStats() {
+      document.getElementById("arpLapCount").textContent = String(lapCount);
+      document.getElementById("arpMissCount").textContent = String(missCount);
+      const timerEl = document.getElementById("arpLiveTimer");
+      if (phase === "sequence" && lastEventTime) {
+        timerEl.textContent = ((performance.now() - lastEventTime) / 1000).toFixed(2) + "s";
+      } else {
+        timerEl.textContent = "\u2014";
+      }
+    }
+
+    function startLiveTimerInterval() {
+      stopLiveTimerInterval();
+      liveTimerInterval = setInterval(renderArpLiveStats, 100);
+    }
+    function stopLiveTimerInterval() {
+      if (liveTimerInterval) { clearInterval(liveTimerInterval); liveTimerInterval = null; }
+    }
+
+    // ---------- Render: customize list ----------
+    function renderArpCustomizeList() {
+      const listEl = document.getElementById("arpCustomizeList");
+      listEl.innerHTML = seqConfig.order.map((id, i) => {
+        const excluded = seqConfig.excluded.includes(id);
+        const checked = excluded ? "" : "checked";
+        return '<div class="arp-customize-row' + (excluded ? " arp-excluded" : "") + '" data-id="' + id + '">' +
+          '<input type="checkbox" ' + checked + ' data-role="include" />' +
+          '<span class="arp-customize-name">' + id + "</span>" +
+          '<button class="arp-order-btn" data-role="up" ' + (i === 0 ? "disabled" : "") + '>\u2191</button>' +
+          '<button class="arp-order-btn" data-role="down" ' + (i === seqConfig.order.length - 1 ? "disabled" : "") + '>\u2193</button>' +
+          "</div>";
+      }).join("");
+
+      listEl.querySelectorAll('[data-role="include"]').forEach((cb) => {
+        cb.addEventListener("change", () => {
+          const id = cb.closest(".arp-customize-row").getAttribute("data-id");
+          if (cb.checked) seqConfig.excluded = seqConfig.excluded.filter((x) => x !== id);
+          else if (!seqConfig.excluded.includes(id)) seqConfig.excluded.push(id);
+          saveSeqConfig();
+          chordIdx = 0;
+          renderArpCustomizeList();
+          armChord();
+        });
+      });
+      listEl.querySelectorAll('[data-role="up"], [data-role="down"]').forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.closest(".arp-customize-row").getAttribute("data-id");
+          const i = seqConfig.order.indexOf(id);
+          const j = btn.getAttribute("data-role") === "up" ? i - 1 : i + 1;
+          if (j < 0 || j >= seqConfig.order.length) return;
+          [seqConfig.order[i], seqConfig.order[j]] = [seqConfig.order[j], seqConfig.order[i]];
+          saveSeqConfig();
+          chordIdx = 0;
+          renderArpCustomizeList();
+          armChord();
+        });
+      });
+    }
+
+    function renderArpFlashSeg() {
+      const seg = document.getElementById("arpFlashSeg");
+      seg.innerHTML = "";
+      [{ value: true, label: "On" }, { value: false, label: "Off" }].forEach((opt) => {
+        const btn = document.createElement("button");
+        btn.className = "seg-btn" + (flashOnMiss === opt.value ? " seg-btn-active" : "");
+        btn.textContent = opt.label;
+        btn.onclick = () => { flashOnMiss = opt.value; saveFlashPref(); renderArpFlashSeg(); };
+        seg.appendChild(btn);
+      });
+    }
+
+    // ---------- Event bindings ----------
+    document.getElementById("arpCustomizeBtn").addEventListener("click", () => {
+      customizeOpen = !customizeOpen;
+      document.getElementById("arpCustomizeCard").style.display = customizeOpen ? "flex" : "none";
+      if (customizeOpen) renderArpCustomizeList();
+    });
+    document.getElementById("arpCustomizeDoneBtn").addEventListener("click", () => {
+      customizeOpen = false;
+      document.getElementById("arpCustomizeCard").style.display = "none";
+    });
+    document.getElementById("arpResetOrderBtn").addEventListener("click", () => {
+      seqConfig = { order: DEFAULT_ORDER.slice(), excluded: [] };
+      saveSeqConfig();
+      chordIdx = 0;
+      renderArpCustomizeList();
+      armChord();
+    });
+    document.getElementById("arpRestartBtn").addEventListener("click", armChord);
+    document.getElementById("arpNextBtn").addEventListener("click", () => {
+      const seq = activeSequence();
+      if (!seq.length) return;
+      chordIdx = (chordIdx + 1) % seq.length;
+      armChord();
+    });
+
+    window.onArpTabVisibility = function (active) {
+      arpTabActive = active;
+      if (active) {
+        if (phase === "idle") armChord(); else renderArpTab();
+        startLiveTimerInterval();
+      } else {
+        stopLiveTimerInterval();
+      }
+    };
+
+    renderArpFlashSeg();
+    renderArpTab();
+
+    // ---------- Tracking: Arpeggios sub-tab ----------
+    let selectedTransitionKey = null;
+    function transitionKey(e) { return e.chord + " \u00b7 " + e.fromDeg + "\u2192" + e.toDeg; }
+
+    function renderArpTrackingList() {
+      const listEl = document.getElementById("arpTrackingList");
+      const log = loadLog(LOG_KEY);
+      const missLog = loadLog(MISS_LOG_KEY);
+
+      const groups = {};
+      log.forEach((e) => {
+        const k = transitionKey(e);
+        (groups[k] = groups[k] || []).push(e);
+      });
+      const missCounts = {};
+      missLog.forEach((e) => {
+        const k = transitionKey(e);
+        missCounts[k] = (missCounts[k] || 0) + 1;
+      });
+      // Include transitions that have only misses, never a success, too.
+      Object.keys(missCounts).forEach((k) => { if (!groups[k]) groups[k] = []; });
+
+      const keys = Object.keys(groups).sort((a, b) => {
+        const la = groups[a].length ? groups[a][groups[a].length - 1].ts : 0;
+        const lb = groups[b].length ? groups[b][groups[b].length - 1].ts : 0;
+        return lb - la;
+      });
+
+      if (!keys.length) {
+        listEl.innerHTML = '<div class="tracking-empty">No arpeggio attempts logged yet.<br>Play through a sequence on the Arpeggios tab to start building this.</div>';
+        selectedTransitionKey = null;
+        return;
+      }
+      if (!selectedTransitionKey || !groups[selectedTransitionKey]) selectedTransitionKey = keys[0];
+
+      listEl.innerHTML = keys.map((k) => {
+        const entries = groups[k];
+        const misses = missCounts[k] || 0;
+        const last = entries.length ? entries[entries.length - 1] : null;
+        const meta = entries.length ? (entries.length + " \u00b7 " + (last.ms / 1000).toFixed(2) + "s") : "0 attempts";
+        return '<div class="tracking-chord-row' + (k === selectedTransitionKey ? " active" : "") + '" data-key="' + k.replace(/"/g, "&quot;") + '">' +
+          '<span class="tracking-chord-name">' + k + "</span>" +
+          '<span class="tracking-chord-meta">' + meta + (misses ? ' <span class="arp-miss-count-badge">' + misses + " miss" + (misses === 1 ? "" : "es") + "</span>" : "") + "</span>" +
+          "</div>";
+      }).join("");
+
+      listEl.querySelectorAll(".tracking-chord-row").forEach((row) => {
+        row.addEventListener("click", () => {
+          selectedTransitionKey = row.getAttribute("data-key");
+          renderArpTracking();
+        });
+      });
+    }
+
+    function buildYTicks(maxMs) {
+      const maxSec = Math.max(1, maxMs / 1000);
+      const niceMax = Math.ceil(maxSec * 1.15 * 2) / 2;
+      const steps = 4;
+      const ticks = [];
+      for (let i = 0; i <= steps; i++) ticks.push(Math.round((niceMax * i / steps) * 100) / 100);
+      return { niceMax, ticks };
+    }
+
+    function renderArpChart(entries) {
+      const svg = document.getElementById("arpChartSvg");
+      const tooltip = document.getElementById("arpTooltip");
+      const W = 720, H = 320, ML = 46, MR = 16, MT = 16, MB = 34;
+      const plotW = W - ML - MR, plotH = H - MT - MB;
+
+      if (!entries.length) {
+        svg.innerHTML = '<text x="' + (W / 2) + '" y="' + (H / 2) + '" text-anchor="middle" fill="#7A7156" font-family="Inter, sans-serif" font-size="13">No successful attempts logged for this transition yet</text>';
+        return;
+      }
+
+      const maxMs = Math.max(...entries.map((e) => e.ms));
+      const { niceMax, ticks } = buildYTicks(maxMs);
+      const n = entries.length;
+      const xFor = (i) => ML + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1));
+      const yFor = (ms) => MT + plotH - (plotH * (ms / 1000)) / niceMax;
+
+      const parts = [];
+      ticks.forEach((t) => {
+        const y = yFor(t * 1000);
+        parts.push('<line x1="' + ML + '" y1="' + y + '" x2="' + (W - MR) + '" y2="' + y + '" stroke="#2c2820" stroke-width="1" />');
+        parts.push('<text x="' + (ML - 8) + '" y="' + (y + 4) + '" text-anchor="end" fill="#7A7156" font-family="JetBrains Mono, monospace" font-size="10">' + t.toFixed(1) + "s</text>");
+      });
+
+      const linePoints = entries.map((e, i) => xFor(i) + "," + yFor(e.ms)).join(" ");
+      parts.push('<polyline points="' + linePoints + '" fill="none" stroke="#4a4432" stroke-width="1.5" />');
+
+      entries.forEach((e, i) => {
+        const x = xFor(i), y = yFor(e.ms);
+        parts.push('<circle cx="' + x + '" cy="' + y + '" r="5" fill="#C9A227" stroke="#16140F" stroke-width="1.5" data-idx="' + i + '" class="tp" />');
+      });
+
+      parts.push('<text x="' + (ML + plotW / 2) + '" y="' + (H - 6) + '" text-anchor="middle" fill="#7A7156" font-family="Inter, sans-serif" font-size="11">attempt \u2116 (chronological) \u2014 ' + n + ' total</text>');
+      svg.innerHTML = parts.join("");
+
+      svg.querySelectorAll(".tp").forEach((circle) => {
+        circle.addEventListener("mouseenter", () => {
+          const idx = Number(circle.getAttribute("data-idx"));
+          const e = entries[idx];
+          const date = new Date(e.ts);
+          tooltip.innerHTML = (e.ms / 1000).toFixed(2) + "s<br>" + date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          tooltip.style.display = "block";
+          const rect = svg.getBoundingClientRect();
+          tooltip.style.left = (circle.cx.baseVal.value * (rect.width / W)) + "px";
+          tooltip.style.top = (circle.cy.baseVal.value * (rect.height / H)) + "px";
+        });
+        circle.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+      });
+    }
+
+    function renderArpMissBreakdown() {
+      const el = document.getElementById("arpMissBreakdown");
+      if (!selectedTransitionKey) { el.textContent = ""; return; }
+      const missLog = loadLog(MISS_LOG_KEY).filter((e) => transitionKey(e) === selectedTransitionKey);
+      if (!missLog.length) { el.textContent = ""; return; }
+      const counts = {};
+      missLog.forEach((e) => { counts[e.played] = (counts[e.played] || 0) + 1; });
+      const parts = Object.keys(counts)
+        .sort((a, b) => counts[b] - counts[a])
+        .map((note) => "played " + note + " instead (\u00d7" + counts[note] + ")");
+      el.textContent = parts.join(", ");
+    }
+
+    function renderArpTracking() {
+      renderArpTrackingList();
+      const log = loadLog(LOG_KEY).filter((e) => transitionKey(e) === selectedTransitionKey).sort((a, b) => a.ts - b.ts);
+      document.getElementById("arpChartTitle").textContent = selectedTransitionKey || "\u2014";
+      document.getElementById("arpChartSub").textContent = log.length
+        ? log.length + " successful attempt" + (log.length === 1 ? "" : "s") + " recorded"
+        : "";
+      renderArpChart(log);
+      renderArpMissBreakdown();
+    }
+
+    document.getElementById("arpTrackingClearBtn").addEventListener("click", () => {
+      if (!selectedTransitionKey) return;
+      const log = loadLog(LOG_KEY).filter((e) => transitionKey(e) !== selectedTransitionKey);
+      saveLog(LOG_KEY, log);
+      const missLog = loadLog(MISS_LOG_KEY).filter((e) => transitionKey(e) !== selectedTransitionKey);
+      saveLog(MISS_LOG_KEY, missLog);
+      selectedTransitionKey = null;
+      renderArpTracking();
+    });
+
+    window.renderArpeggioTracking = renderArpTracking;
   })();
   </script>
 </body>
