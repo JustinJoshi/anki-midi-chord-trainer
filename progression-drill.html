@@ -219,6 +219,20 @@ async function flipAnkiCard(setAnkiStatus) {
 
 const Icon = { play: "▶", stop: "■", plug: "🔌", piano: "🎹", reset: "↺", note: "🎵" };
 
+// Small hover-tooltip component, matching the "?" dot pattern used on the
+// Chord Drill / Tracking tabs, so setting explanations look consistent
+// across both tools even though this file is a separate React app.
+function InfoLabel({ text, children }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <span style={styles.infoLabel} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      {children}
+      <span style={styles.infoDot}>?</span>
+      {hover && <span style={styles.infoTooltip}>{text}</span>}
+    </span>
+  );
+}
+
 function ProgressionDrill() {
   const [progType, setProgType] = useState("ii-V-I");
   const [keyRoot, setKeyRoot] = useState(ROOTS[0]);
@@ -446,7 +460,9 @@ function ProgressionDrill() {
 
         <div style={styles.controlsRow}>
           <div style={styles.controlGroup}>
-            <span style={styles.controlLabel}>Progression</span>
+            <span style={styles.controlLabel}>
+              <InfoLabel text="Which harmonic pattern to loop: ii-V-I (the three-chord cadence under most jazz tunes) or a full 12-Bar Blues. Switching restarts the loop from the top.">Progression</InfoLabel>
+            </span>
             <div style={styles.segmented}>
               {PROGRESSION_TYPES.map((p) => (
                 <button key={p.key} className="seg" onClick={() => { stopDrill(); setProgType(p.key); }}
@@ -457,7 +473,9 @@ function ProgressionDrill() {
             </div>
           </div>
           <div style={styles.controlGroup}>
-            <span style={styles.controlLabel}>Key</span>
+            <span style={styles.controlLabel}>
+              <InfoLabel text="Which of the 5 keys (C/G/D/A/E) to run the progression in. The chords and scales shown update to that key; your practice history is tracked separately per key.">Key</InfoLabel>
+            </span>
             <div style={styles.segmented}>
               {ROOTS.map((r) => (
                 <button key={r.pc} className="seg" onClick={() => { stopDrill(); setKeyRoot(r); }}
@@ -552,6 +570,19 @@ const styles = {
   controlsRow: { display: "flex", flexDirection: "column", gap: 14, marginBottom: 22 },
   controlGroup: { display: "flex", flexDirection: "column", gap: 8 },
   controlLabel: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A79B85" },
+  infoLabel: { position: "relative", display: "inline-flex", alignItems: "center", gap: 5, cursor: "help" },
+  infoDot: {
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    width: 13, height: 13, borderRadius: "50%", border: "1px solid #4a4432",
+    color: "#7A7156", fontSize: 9, fontFamily: "'Inter', sans-serif", lineHeight: 1, flexShrink: 0,
+  },
+  infoTooltip: {
+    position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)",
+    width: 220, background: "#211E17", border: "1px solid #34301F", borderRadius: 10,
+    padding: "10px 12px", fontFamily: "'Inter', sans-serif", fontSize: 12, fontWeight: 400,
+    color: "#DCD3BE", lineHeight: 1.5, textTransform: "none", letterSpacing: "normal",
+    zIndex: 50, boxShadow: "0 6px 20px rgba(0,0,0,0.45)",
+  },
   segmented: { display: "flex", gap: 8, flexWrap: "wrap" },
   segBtn: { background: "#211E17", border: "1px solid #34301F", color: "#A79B85", borderRadius: 999, padding: "8px 14px", fontSize: 13, fontFamily: "'Inter', sans-serif", fontWeight: 500 },
   segBtnActive: { background: "#2A2510", border: "1px solid #C9A227", color: "#E8CF7A" },

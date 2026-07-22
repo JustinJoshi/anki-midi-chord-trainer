@@ -90,6 +90,24 @@
     font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em;
     text-transform: uppercase; color: #A79B85;
   }
+
+  /* ---------- Hover tooltips on setting labels ---------- */
+  .info-label { position: relative; display: inline-flex; align-items: center; gap: 5px; cursor: help; }
+  .info-label .info-dot {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 13px; height: 13px; border-radius: 50%; border: 1px solid #4a4432;
+    color: #7A7156; font-size: 9px; font-family: 'Inter', sans-serif; line-height: 1;
+    flex-shrink: 0;
+  }
+  .info-label .info-tooltip {
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    width: 240px; background: #211E17; border: 1px solid #34301F; border-radius: 10px;
+    padding: 10px 12px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 400;
+    color: #DCD3BE; line-height: 1.5; text-transform: none; letter-spacing: normal;
+    opacity: 0; pointer-events: none; transition: opacity 0.12s ease; z-index: 50;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+  }
+  .info-label:hover .info-tooltip, .info-label:focus .info-tooltip { opacity: 1; }
   .segmented { display: flex; gap: 8px; flex-wrap: wrap; }
   .seg-btn {
     background: #211E17; border: 1px solid #34301F; color: #A79B85;
@@ -245,6 +263,7 @@
     font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7A7156;
   }
 
+  .grade-badge-row { display: flex; justify-content: center; margin-bottom: 12px; }
   .grade-pill {
     font-family: 'Inter', sans-serif; font-size: 12.5px; font-weight: 600;
     border-radius: 999px; padding: 5px 14px; display: inline-flex; align-items: center; gap: 6px;
@@ -438,6 +457,8 @@
     background: #211E17; border: 1px solid #34301F; border-radius: 999px;
     padding: 6px 14px;
   }
+  a.welcome-authority-chip { text-decoration: none; transition: all 0.15s ease; }
+  a.welcome-authority-chip:hover { border-color: #C9A227; color: #E8CF7A; }
 
   /* ---------- CTA ---------- */
   .welcome-cta-wrap { text-align: center; margin-top: 40px; }
@@ -467,6 +488,7 @@
     <button class="tab-btn" data-tab="welcome">Welcome</button>
     <button class="tab-btn active" data-tab="tool">Chord Drill</button>
     <button class="tab-btn" data-tab="arpeggios">Arpeggios</button>
+    <button class="tab-btn" data-tab="rootcycle">Root Cycling</button>
     <button class="tab-btn" data-tab="tracking">Tracking</button>
     <a class="tab-btn" href="progression-drill.html">Progression</a>
   </nav>
@@ -575,6 +597,22 @@
       </div>
     </div>
 
+    <div class="welcome-section">
+      <div class="welcome-section-label">06 · the companion deck</div>
+      <h2 class="welcome-section-title">The actual Anki deck behind this</h2>
+      <p class="welcome-section-body">
+        Two ready-to-import decks: root-position 7ths and diminished 7ths
+        across five keys (C-G-D-A-E), and the extended 9/11/13 voicings with
+        LH/RH fingering built in. Both are plain tab-separated Anki exports —
+        import via Anki's File → Import (Basic notetype), no add-on beyond
+        AnkiConnect needed to use them with this drill.
+      </p>
+      <div class="welcome-authorities">
+        <a class="welcome-authority-chip" href="chord-symbols-CGDAEno11.txt" download>↓ Chord Symbols — 7ths &amp; dim7 (.txt)</a>
+        <a class="welcome-authority-chip" href="chord-symbols-CGDAE.txt" download>↓ Chord Symbols — 9/11/13 (.txt)</a>
+      </div>
+    </div>
+
     <div class="welcome-cta-wrap">
       <button class="welcome-cta-btn" onclick="switchToToolTab()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -597,56 +635,63 @@
 
     <div class="controls-row">
       <div class="control-group">
-        <span class="control-label">Drill mode</span>
+        <span class="control-label info-label">Drill mode<span class="info-dot">?</span><span class="info-tooltip">Switches what you're drilling: a single chord quality, a whole quality "family" across every root, or the extended (9/11/13) voicings. Changes which controls below are relevant.</span></span>
         <div class="segmented" id="modeSeg"></div>
       </div>
 
       <div class="control-group" id="rootGroup">
-        <span class="control-label">Root</span>
+        <span class="control-label info-label">Root<span class="info-dot">?</span><span class="info-tooltip">The root note the current chord is built on. Only shown in Single mode — Family and Extended modes cycle through all 12 roots automatically.</span></span>
         <div class="root-grid" id="rootGrid"></div>
       </div>
 
       <div class="control-group" id="qualityGroup">
-        <span class="control-label">Quality</span>
+        <span class="control-label info-label">Quality<span class="info-dot">?</span><span class="info-tooltip">The chord quality being drilled — maj7, m7, dom7, and so on. Combines with the Root to form the exact chord you need to play.</span></span>
         <div class="segmented" id="qualitySeg"></div>
       </div>
 
       <div class="control-group">
-        <span class="control-label">Reps per round</span>
+        <span class="control-label info-label">Reps per round<span class="info-dot">?</span><span class="info-tooltip">How many times you repeat the same chord before it counts as a completed round. Low numbers (1) are a quick check; higher numbers build real muscle memory through repetition.</span></span>
         <div class="segmented" id="repSeg"></div>
       </div>
 
       <!-- New control group for toggling chord notes -->
       <div class="control-group">
-        <span class="control-label">Chord Notes</span>
+        <span class="control-label info-label">Chord Notes<span class="info-dot">?</span><span class="info-tooltip">Shows the actual notes of the current chord underneath its symbol — helpful while learning a voicing, worth hiding once you don't need the reminder anymore.</span></span>
         <div class="segmented" id="displayNotesSeg"></div>
+      </div>
+
+      <!-- New control group: briefly reveal notes on a completed round, independent of Chord Notes -->
+      <div class="control-group">
+        <span class="control-label info-label">Reveal on Finish<span class="info-dot">?</span><span class="info-tooltip">Even with Chord Notes hidden, shows the notes the moment you complete a round — confirms what you just played without giving anything away beforehand.</span></span>
+        <div class="segmented" id="revealOnFinishSeg"></div>
       </div>
 
       <!-- New control group for shuffling to a random chord -->
       <div class="control-group">
-        <span class="control-label">Shuffle</span>
+        <span class="control-label info-label">Shuffle<span class="info-dot">?</span><span class="info-tooltip">Picks the next chord at random from the current mode's pool, instead of stepping through in fixed order.</span></span>
         <div class="segmented" id="shuffleSeg"></div>
       </div>
 
       <!-- New control group for following the current Anki review card -->
       <div class="control-group">
-        <span class="control-label">Anki Sync</span>
+        <span class="control-label info-label">Anki Sync<span class="info-dot">?</span><span class="info-tooltip">Links this drill to whatever card is currently up for review in Anki. When on, the chord shown here always matches Anki's card, so the scheduler — not you — decides what you drill next.</span></span>
         <div class="segmented" id="ankiSyncSeg"></div>
         <div class="anki-sync-status" id="ankiSyncStatus"></div>
+        <div class="anki-sync-status" id="ankiDeckStats" style="opacity:0.75;"></div>
       </div>
 
       <!-- New control group: auto-starts the countdown/timer when Anki Sync loads a new card -->
       <div class="control-group" id="autoTimerGroup">
-        <span class="control-label">Automatic Timer</span>
+        <span class="control-label info-label">Automatic Timer<span class="info-dot">?</span><span class="info-tooltip">Skips the manual Start button. The moment Anki Sync loads a new card, a countdown runs automatically and the timer starts the instant it hits zero.</span></span>
         <div class="segmented" id="autoTimerSeg"></div>
         <div class="threshold-row">
           <div class="threshold-field">
-            <span class="threshold-field-label">countdown</span>
+            <span class="threshold-field-label info-label">countdown<span class="info-dot">?</span><span class="info-tooltip">How many seconds the countdown counts down from before the timer starts, when Automatic Timer is on.</span></span>
             <input type="number" class="rep-input" id="countdownSecondsInput" min="1" step="1" style="width:48px;">
             <span class="threshold-field-label">s</span>
           </div>
           <div class="threshold-field">
-            <span class="threshold-field-label">hide until go</span>
+            <span class="threshold-field-label info-label">hide until go<span class="info-dot">?</span><span class="info-tooltip">Keeps the chord (and the "Following: X" status text) hidden during the countdown, so you're reading and reacting to Anki's card, not this screen's answer key.</span></span>
             <div class="segmented" id="hideChordSeg"></div>
           </div>
         </div>
@@ -654,7 +699,7 @@
 
       <!-- New control group: pause between finishing a round and reporting the grade to Anki -->
       <div class="control-group" id="breakTimerGroup">
-        <span class="control-label">Break Before Grading</span>
+        <span class="control-label info-label">Break Before Grading<span class="info-dot">?</span><span class="info-tooltip">A pause after you finish a round, before the app reports back to Anki. Gives you a breather between chords — especially useful with Automatic Timer, since the next countdown starts right after grading.</span></span>
         <div class="threshold-row">
           <div class="threshold-field">
             <input type="number" class="rep-input" id="breakSecondsInput" min="0" step="1" style="width:48px;">
@@ -668,22 +713,25 @@
 
       <!-- New control group: auto-grades the Anki card from the first-chord reaction time -->
       <div class="control-group" id="autoGradeGroup">
-        <span class="control-label">Auto-Grade</span>
+        <span class="control-label info-label">Auto-Grade<span class="info-dot">?</span><span class="info-tooltip">Automatically grades the Anki card from how fast you played the first chord — no manual click needed. Under your "good" threshold sends Good, between "good" and "hard" sends Hard, slower than that sends Again.</span></span>
         <div class="segmented" id="autoGradeSeg"></div>
         <div class="threshold-row" id="thresholdRow" style="display:none;">
           <div class="threshold-field">
-            <span class="threshold-field-label">good &lt;</span>
+            <span class="threshold-field-label info-label">good &lt;<span class="info-dot">?</span><span class="info-tooltip">First-chord times under this many seconds send a Good rating to Anki. With the defaults, under 2s = Good.</span></span>
             <input type="number" class="rep-input" id="goodThresholdInput" min="0.1" step="0.1" style="width:56px;">
             <span class="threshold-field-label">s</span>
           </div>
           <div class="threshold-field">
-            <span class="threshold-field-label">hard &lt;</span>
+            <span class="threshold-field-label info-label">hard &lt;<span class="info-dot">?</span><span class="info-tooltip">Times between "good" and this many seconds send a Hard rating. Anything slower than this sends Again. With the defaults, 2-4s = Hard, over 4s = Again.</span></span>
             <input type="number" class="rep-input" id="hardThresholdInput" min="0.1" step="0.1" style="width:56px;">
             <span class="threshold-field-label">s</span>
           </div>
         </div>
-        <div class="grade-pill" id="gradeStatusBadge" style="display:none;"></div>
       </div>
+    </div>
+
+    <div class="grade-badge-row">
+      <div class="grade-pill" id="gradeStatusBadge" style="display:none;"></div>
     </div>
 
     <div class="card">
@@ -705,6 +753,11 @@
       </div>
       <div class="progress-track">
         <div class="progress-fill" id="progressFill" style="width:0%;"></div>
+      </div>
+
+      <div class="threshold-row" style="margin-bottom:10px;">
+        <span class="threshold-field-label info-label">countdown on start<span class="info-dot">?</span><span class="info-tooltip">When on, clicking Start runs a countdown (using the same length set under Automatic Timer) before the timer begins, instead of starting immediately.</span></span>
+        <div class="segmented" id="startCountdownSeg"></div>
       </div>
 
       <button class="btn start-btn" id="startBtn">
@@ -770,11 +823,11 @@
 
     <div class="controls-row">
       <div class="control-group">
-        <span class="control-label">Flash on Miss</span>
+        <span class="control-label info-label">Flash on Miss<span class="info-dot">?</span><span class="info-tooltip">When a note-on doesn't match the note you're supposed to play next, briefly flashes the target red. The miss is always logged either way — this only controls the visual feedback.</span></span>
         <div class="segmented" id="arpFlashSeg"></div>
       </div>
       <div class="control-group">
-        <span class="control-label">Sequence</span>
+        <span class="control-label info-label">Sequence<span class="info-dot">?</span><span class="info-tooltip">Which of the 12 minor-11th arpeggios are included and in what order. Uncheck any you don't want to practice yet, and use the arrows to reorder the ones you've included.</span></span>
         <button class="btn reset-btn" id="arpCustomizeBtn" style="width:auto;padding:8px 16px;border-radius:999px;">Customize chords &amp; order</button>
       </div>
     </div>
@@ -824,6 +877,69 @@
   </div>
   </div>
 
+  <div id="tab-rootcycle" class="tab-panel">
+  <div class="wrap">
+    <div class="header">
+      <div class="eyebrow">random-root practice, decoupled from the vocabulary itself</div>
+      <h1 class="title">Root Cycling</h1>
+    </div>
+
+    <div class="controls-row">
+      <div class="control-group">
+        <span class="control-label info-label">Practice Type<span class="info-dot">?</span><span class="info-tooltip">Chord mode drills a single quality (e.g. m7) as a block chord in a random key each rep. Arpeggio mode drills the minor-11th root+5 / 9-b3-11-5-b7-9-11 shape, transposed to a random root.</span></span>
+        <div class="segmented" id="rcTypeSeg"></div>
+      </div>
+      <div class="control-group" id="rcQualityGroup">
+        <span class="control-label info-label">Quality<span class="info-dot">?</span><span class="info-tooltip">Which chord quality to drill (Chord mode only) — the root changes randomly each rep, the quality stays fixed so you're isolating "can I find this shape anywhere" from "do I know this shape at all."</span></span>
+        <div class="segmented" id="rcQualitySeg"></div>
+      </div>
+      <div class="control-group">
+        <span class="control-label info-label">Root Pool<span class="info-dot">?</span><span class="info-tooltip">Which of the 12 roots are eligible to come up. Narrow this to a handful of keys you're weak in, or leave all 12 on for the full random-key challenge.</span></span>
+        <button class="btn reset-btn" id="rcCustomizeBtn" style="width:auto;padding:8px 16px;border-radius:999px;">Customize roots</button>
+      </div>
+    </div>
+
+    <div class="card" id="rcCustomizeCard" style="display:none; align-items:stretch; margin-bottom:18px;">
+      <div class="arp-customize-list" id="rcCustomizeList"></div>
+      <div style="display:flex; gap:10px; justify-content:center; margin-top:10px;">
+        <button class="btn reset-btn" id="rcResetRootsBtn" style="width:auto;padding:8px 16px;border-radius:999px;">Reset to all 12</button>
+        <button class="btn reset-btn" id="rcCustomizeDoneBtn" style="width:auto;padding:8px 16px;border-radius:999px;">Done</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow" id="rcPromptLabel">press start</div>
+      <div class="title" id="rcPromptName" style="font-size:36px;">—</div>
+      <div class="arp-lh-row" id="rcSubRow"></div>
+
+      <div class="arp-cell-strip" id="rcCellStrip"></div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-value" id="rcLiveTimer">—</div>
+          <div class="stat-label">since last note</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="rcRepCount">0</div>
+          <div class="stat-label">roots completed</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="rcMissCount">0</div>
+          <div class="stat-label">misses this root</div>
+        </div>
+      </div>
+
+      <div class="arp-history" id="rcHistory"></div>
+
+      <div class="action-row">
+        <button class="btn start-btn" id="rcStartBtn" style="width:auto;padding:10px 18px;">Start</button>
+        <button class="btn reset-btn" id="rcNextBtn" style="width:auto;padding:10px 18px;border-radius:999px;">Skip to next root →</button>
+        <button class="btn reset-btn" id="rcStopBtn" style="width:auto;padding:10px 18px;border-radius:999px;">Stop</button>
+      </div>
+    </div>
+  </div>
+  </div>
+
   <div id="tab-tracking" class="tab-panel">
   <div class="wrap">
     <div class="header">
@@ -832,8 +948,9 @@
     </div>
 
     <div class="sub-tab-nav">
-      <button class="sub-tab-btn active" data-subtab="chords">Chord Drill</button>
-      <button class="sub-tab-btn" data-subtab="arpeggios">Arpeggios</button>
+      <button class="sub-tab-btn active" data-subtab="chords" title="First-chord reaction times from the Chord Drill tab, tracked per chord over time.">Chord Drill</button>
+      <button class="sub-tab-btn" data-subtab="arpeggios" title="Note-to-note transition times and misses from the Arpeggios tab, tracked per transition over time.">Arpeggios</button>
+      <button class="sub-tab-btn" data-subtab="rootcycle" title="Reaction times from the Root Cycling tab, aggregated across random keys per quality or transition.">Root Cycling</button>
     </div>
 
     <div id="subtab-chords" class="sub-tab-panel active">
@@ -852,7 +969,7 @@
             <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#7FA37A;"></span>Good</span>
             <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#6FA9A3;"></span>Easy</span>
             <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#5c5646;"></span>Ungraded</span>
-            <span class="tracking-legend-item">◎ hollow ring = redo attempt</span>
+            <span class="tracking-legend-item" title="Attempts crossing these lines are crossing your own Auto-Grade thresholds.">◎ hollow ring = redo attempt</span>
           </div>
           <button class="tracking-clear-btn" id="trackingClearBtn">Clear this chord's log</button>
         </div>
@@ -874,6 +991,26 @@
           </div>
           <div class="arp-miss-breakdown" id="arpMissBreakdown"></div>
           <button class="tracking-clear-btn" id="arpTrackingClearBtn">Clear this transition's log</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="subtab-rootcycle" class="sub-tab-panel">
+      <div class="tracking-wrap">
+        <div class="tracking-list-card" id="rcTrackingList"></div>
+        <div class="tracking-chart-card">
+          <h2 class="tracking-chart-title" id="rcChartTitle">—</h2>
+          <p class="tracking-chart-sub" id="rcChartSub"></p>
+          <div style="position:relative;">
+            <svg id="rcChartSvg" width="100%" viewBox="0 0 720 320" style="display:block;"></svg>
+            <div class="tracking-tooltip" id="rcTooltip"></div>
+          </div>
+          <div class="tracking-legend">
+            <span class="tracking-legend-item"><span class="tracking-legend-dot" style="background:#7C9CBF;"></span>Reaction time</span>
+            <span class="tracking-legend-item" title="Times are aggregated across all keys for this quality or transition -- hover a point to see which root it was in.">aggregated across random keys</span>
+          </div>
+          <div class="arp-miss-breakdown" id="rcRootBreakdown"></div>
+          <button class="tracking-clear-btn" id="rcTrackingClearBtn">Clear this log</button>
         </div>
       </div>
     </div>
@@ -952,7 +1089,7 @@
   const FAMILY = QUALITY_GROUPS[0].qualities;
   const EXTENDED = QUALITY_GROUPS.slice(1).reduce((acc, g) => acc.concat(g.qualities), []);
   const SINGLE_QUALITIES = QUALITY_GROUPS.reduce((acc, g) => acc.concat(g.qualities), []);
-  const REP_TARGETS = [8, 12, 16, 20];
+  const REP_TARGETS = [1, 5, 8, 12, 16, 20];
 
   function noteName(pc, flat) {
     const n = ((pc % 12) + 12) % 12;
@@ -997,6 +1134,8 @@
     lastCardId: null,
     detectedChord: null,
     ankiSyncStatus: "Follow off",
+    deckStatsText: "",
+    ankiDefaultsApplied: false,
 
     autoTimer: false,
     countdownValue: 0,
@@ -1015,6 +1154,9 @@
 
     roundIsRedo: false,    // was the current round started via Redo?
     pendingLogId: null,    // id of this round's first-chord-log entry, awaiting a grade
+
+    startCountdownEnabled: false, // run the countdown before a manually-clicked Start too
+    revealNotesOnFinish: false,   // briefly show chord notes on round completion, regardless of the main Chord Notes setting
   };
 
   const heldSet = new Set();
@@ -1327,6 +1469,29 @@
     }
   }
 
+  // Uses AnkiConnect's getDeckStats action to show how many cards are new,
+  // learning, and due in the deck the current card belongs to -- the
+  // deckName comes for free from the same guiCurrentCard call that already
+  // drives Anki Sync, so this is a second small request, not a new poll loop.
+  async function fetchDeckStats(deckName) {
+    try {
+      const res = await fetch("http://127.0.0.1:8765", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "getDeckStats", version: 6, params: { decks: [deckName] } })
+      });
+      const data = await res.json();
+      if (data.error || !data.result) return;
+      const entry = Object.values(data.result)[0];
+      if (!entry) return;
+      state.deckStatsText = `${entry.new_count} new · ${entry.learn_count} learning · ${entry.review_count} due`;
+      renderAnkiSync();
+    } catch (e) {
+      // Silent -- deck stats are a nice-to-have, not worth surfacing a
+      // separate error state for on top of the main Anki Sync status.
+    }
+  }
+
   async function pollAnkiCard() {
     if (!state.ankiFollow) return;
 
@@ -1337,6 +1502,21 @@
         body: JSON.stringify({ action: "guiCurrentCard", version: 6 })
       });
       const data = await res.json();
+
+      // The first time a Follow-card session actually reaches AnkiConnect
+      // successfully, switch on the recommended combo for hands-free Anki
+      // practice. Only fires once per Follow toggle, so it never clobbers
+      // settings you've deliberately changed since connecting.
+      if (!data.error && !state.ankiDefaultsApplied) {
+        state.ankiDefaultsApplied = true;
+        state.autoTimer = true;
+        state.countdownSeconds = 3;
+        state.hideChordUntilGo = true;
+        state.breakSeconds = 5;
+        state.breakTickSound = false;
+        state.autoGrade = true;
+        saveSettings();
+      }
 
       if (data.error) {
         state.ankiSyncStatus = `Anki: ${data.error}`;
@@ -1355,6 +1535,7 @@
       state.lastCardId = cardId;
       const question = data.result.question || "";
       const parsed = parseChordFromText(question);
+      const deckName = data.result.deckName || null;
 
       if (parsed) {
         applyAnkiChord(parsed);
@@ -1363,6 +1544,8 @@
         state.ankiSyncStatus = "Card found, no chord parsed";
         renderAnkiSync();
       }
+
+      if (deckName) fetchDeckStats(deckName);
     } catch (e) {
       state.ankiSyncStatus = "Anki not reachable";
       state.lastCardId = null;
@@ -1384,11 +1567,12 @@
     state.lastCardId = null;
     state.detectedChord = null;
     state.ankiSyncStatus = "Follow off";
+    state.deckStatsText = "";
   }
 
   function setAnkiFollow(enabled) {
     state.ankiFollow = enabled;
-    if (enabled) startAnkiPolling();
+    if (enabled) { state.ankiDefaultsApplied = false; startAnkiPolling(); }
     else stopAnkiPolling();
     renderAnkiSync();
   }
@@ -1683,10 +1867,13 @@
     qualitySeg: document.getElementById("qualitySeg"),
     repSeg: document.getElementById("repSeg"),
     displayNotesSeg: document.getElementById("displayNotesSeg"), // <-- Added element reference
+    revealOnFinishSeg: document.getElementById("revealOnFinishSeg"),
     shuffleSeg: document.getElementById("shuffleSeg"),
     ankiSyncSeg: document.getElementById("ankiSyncSeg"),
     ankiSyncStatus: document.getElementById("ankiSyncStatus"),
+    ankiDeckStats: document.getElementById("ankiDeckStats"),
     autoTimerSeg: document.getElementById("autoTimerSeg"),
+    startCountdownSeg: document.getElementById("startCountdownSeg"),
     autoTimerGroup: document.getElementById("autoTimerGroup"),
     countdownSecondsInput: document.getElementById("countdownSecondsInput"),
     hideChordSeg: document.getElementById("hideChordSeg"),
@@ -1880,6 +2067,17 @@
     });
   }
 
+  function renderRevealOnFinishSeg() {
+    el.revealOnFinishSeg.innerHTML = "";
+    [{ value: false, label: "Off" }, { value: true, label: "On" }].forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.className = "seg seg-btn" + (state.revealNotesOnFinish === opt.value ? " seg-btn-active" : "");
+      btn.textContent = opt.label;
+      btn.onclick = () => { state.revealNotesOnFinish = opt.value; render(); };
+      el.revealOnFinishSeg.appendChild(btn);
+    });
+  }
+
   // ---------- New render function for shuffle / random chord ----------
   function renderShuffleBtn() {
     el.shuffleSeg.innerHTML = "";
@@ -1918,6 +2116,8 @@
       (state.ankiFollow && state.detectedChord ? " anki-sync-status-active" : "") +
       (state.ankiFollow && !state.detectedChord && state.ankiSyncStatus.includes("not reachable")
         ? " anki-sync-status-error" : "");
+
+    el.ankiDeckStats.textContent = state.ankiFollow ? state.deckStatsText : "";
   }
 
   function renderAutoTimerSeg() {
@@ -1948,6 +2148,17 @@
       btn.textContent = opt.label;
       btn.onclick = () => { state.hideChordUntilGo = opt.value; render(); };
       el.hideChordSeg.appendChild(btn);
+    });
+  }
+
+  function renderStartCountdownSeg() {
+    el.startCountdownSeg.innerHTML = "";
+    [{ value: false, label: "Off" }, { value: true, label: "On" }].forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.className = "seg seg-btn" + (state.startCountdownEnabled === opt.value ? " seg-btn-active" : "");
+      btn.textContent = opt.label;
+      btn.onclick = () => { state.startCountdownEnabled = opt.value; render(); };
+      el.startCountdownSeg.appendChild(btn);
     });
   }
 
@@ -2034,8 +2245,10 @@
     const masked = state.hideChordUntilGo && state.phase === "countdown";
     el.symbolEl.textContent = masked ? "????" : symbol();
     el.chordNotesEl.textContent = masked ? "" : chordNotes().join("  ·  ");
-    // Toggle visibility based on state
-    el.chordNotesEl.style.visibility = (!masked && state.showNotes) ? "visible" : "hidden";
+    // Toggle visibility based on state -- also force-reveal on a completed
+    // round when "reveal on finish" is on, regardless of the main toggle.
+    const forceReveal = state.revealNotesOnFinish && state.justCompleted;
+    el.chordNotesEl.style.visibility = (!masked && (state.showNotes || forceReveal)) ? "visible" : "hidden";
   }
 
   function renderPhase() {
@@ -2138,9 +2351,11 @@
     renderQualitySeg();
     renderRepSeg();
     renderDisplayNotesSeg(); // <-- Call the new render function
+    renderRevealOnFinishSeg();
     renderShuffleBtn();
     renderAnkiSync();
     renderAutoTimerSeg();
+    renderStartCountdownSeg();
     renderBreakTimerGroup();
     renderAutoGradeSeg();
     renderGradeStatusBadge();
@@ -2154,7 +2369,10 @@
   }
 
   // ---------- Event bindings ----------
-  el.startBtn.onclick = startDrill;
+  el.startBtn.onclick = () => {
+    if (state.startCountdownEnabled) startAutoCountdown();
+    else startDrill();
+  };
   el.stopBtn.onclick = stopDrill;
   el.redoBtn.onclick = redoChord;
   el.nextBtn.onclick = nextChord;
@@ -2201,6 +2419,11 @@
 
   // ---------- Initial render ----------
   render();
+
+  // Expose shared data so the Root Cycling tab (a separate script block)
+  // can reuse the exact same roots/qualities instead of duplicating them.
+  window.sharedRoots = ROOTS;
+  window.sharedQualityGroups = QUALITY_GROUPS;
 })();
 </script>
   <script>
@@ -2212,11 +2435,12 @@
       panels.forEach((p) => p.classList.toggle('active', p.id === 'tab-' + name));
       if (name === 'tracking') renderTracking();
       if (typeof window.onArpTabVisibility === "function") window.onArpTabVisibility(name === "arpeggios");
+      if (typeof window.onRootCycleTabVisibility === "function") window.onRootCycleTabVisibility(name === "rootcycle");
     }
     tabs.forEach((t) => t.addEventListener('click', () => switchTab(t.dataset.tab)));
     window.switchToToolTab = function () { switchTab('tool'); };
 
-    // ---------- Tracking sub-tabs (Chord Drill / Arpeggios) ----------
+    // ---------- Tracking sub-tabs (Chord Drill / Arpeggios / Root Cycling) ----------
     const subTabs = document.querySelectorAll('.sub-tab-btn[data-subtab]');
     const subPanels = document.querySelectorAll('.sub-tab-panel');
     function switchSubTab(name) {
@@ -2224,6 +2448,7 @@
       subPanels.forEach((p) => p.classList.toggle('active', p.id === 'subtab-' + name));
       if (name === 'chords') renderTracking();
       if (name === 'arpeggios' && typeof window.renderArpeggioTracking === "function") window.renderArpeggioTracking();
+      if (name === 'rootcycle' && typeof window.renderRootCycleTracking === "function") window.renderRootCycleTracking();
     }
     subTabs.forEach((t) => t.addEventListener('click', () => switchSubTab(t.dataset.subtab)));
 
@@ -2402,15 +2627,15 @@
     // pc = pitch class 0-11 (C=0 ... B=11), used for MIDI matching.
     // name = display spelling exactly as given (Cb kept as written for Abm11).
     const ARPEGGIO_CHORDS = [
-      { id: "Bbm11", lh: [{ name: "Bb", pc: 10 }, { name: "F", pc: 5 }], rh: [
+      { id: "Bbm11", lh: [{ name: "Bb", pc: 10 }, { name: "F", pc: 5 }, { name: "Ab", pc: 8 }], rh: [
         { name: "C", pc: 0, deg: "9" }, { name: "Db", pc: 1, deg: "b3" }, { name: "Eb", pc: 3, deg: "11" },
         { name: "F", pc: 5, deg: "5" }, { name: "Ab", pc: 8, deg: "b7" }, { name: "C", pc: 0, deg: "9" }, { name: "Eb", pc: 3, deg: "11" },
       ]},
-      { id: "Fm11", lh: [{ name: "F", pc: 5 }, { name: "C", pc: 0 }], rh: [
+      { id: "Fm11", lh: [{ name: "F", pc: 5 }, { name: "C", pc: 0 }, { name: "Eb", pc: 3 }], rh: [
         { name: "G", pc: 7, deg: "9" }, { name: "Ab", pc: 8, deg: "b3" }, { name: "Bb", pc: 10, deg: "11" },
         { name: "C", pc: 0, deg: "5" }, { name: "Eb", pc: 3, deg: "b7" }, { name: "G", pc: 7, deg: "9" }, { name: "Bb", pc: 10, deg: "11" },
       ]},
-      { id: "Abm11", lh: [{ name: "Ab", pc: 8 }, { name: "Eb", pc: 3 }], rh: [
+      { id: "Abm11", lh: [{ name: "Ab", pc: 8 }, { name: "Eb", pc: 3 }, { name: "Gb", pc: 6 }], rh: [
         { name: "Bb", pc: 10, deg: "9" }, { name: "Cb", pc: 11, deg: "b3" }, { name: "Db", pc: 1, deg: "11" },
         { name: "Eb", pc: 3, deg: "5" }, { name: "Gb", pc: 6, deg: "b7" }, { name: "Bb", pc: 10, deg: "9" }, { name: "Db", pc: 1, deg: "11" },
       ]},
@@ -2418,11 +2643,11 @@
         { name: "F", pc: 5, deg: "9" }, { name: "Gb", pc: 6, deg: "b3" }, { name: "Ab", pc: 8, deg: "11" },
         { name: "Bb", pc: 10, deg: "5" }, { name: "Db", pc: 1, deg: "b7" }, { name: "F", pc: 5, deg: "9" }, { name: "Ab", pc: 8, deg: "11" },
       ]},
-      { id: "F#m11", lh: [{ name: "F#", pc: 6 }, { name: "C#", pc: 1 }], rh: [
+      { id: "F#m11", lh: [{ name: "F#", pc: 6 }, { name: "E", pc: 4 }], rh: [
         { name: "G#", pc: 8, deg: "9" }, { name: "A", pc: 9, deg: "b3" }, { name: "B", pc: 11, deg: "11" },
         { name: "C#", pc: 1, deg: "5" }, { name: "E", pc: 4, deg: "b7" }, { name: "G#", pc: 8, deg: "9" }, { name: "B", pc: 11, deg: "11" },
       ]},
-      { id: "C#m11", lh: [{ name: "C#", pc: 1 }, { name: "G#", pc: 8 }], rh: [
+      { id: "C#m11", lh: [{ name: "C#", pc: 1 }, { name: "Ab(G#)", pc: 8 }], rh: [
         { name: "D#", pc: 3, deg: "9" }, { name: "E", pc: 4, deg: "b3" }, { name: "F#", pc: 6, deg: "11" },
         { name: "G#", pc: 8, deg: "5" }, { name: "B", pc: 11, deg: "b7" }, { name: "D#", pc: 3, deg: "9" }, { name: "F#", pc: 6, deg: "11" },
       ]},
@@ -2430,7 +2655,7 @@
         { name: "F#", pc: 6, deg: "9" }, { name: "G", pc: 7, deg: "b3" }, { name: "A", pc: 9, deg: "11" },
         { name: "B", pc: 11, deg: "5" }, { name: "D", pc: 2, deg: "b7" }, { name: "F#", pc: 6, deg: "9" }, { name: "A", pc: 9, deg: "11" },
       ]},
-      { id: "Bm11", lh: [{ name: "B", pc: 11 }, { name: "F#", pc: 6 }], rh: [
+      { id: "Bm11", lh: [{ name: "B", pc: 11 }, { name: "F#(Gb)", pc: 6 }], rh: [
         { name: "C#", pc: 1, deg: "9" }, { name: "D", pc: 2, deg: "b3" }, { name: "E", pc: 4, deg: "11" },
         { name: "F#", pc: 6, deg: "5" }, { name: "A", pc: 9, deg: "b7" }, { name: "C#", pc: 1, deg: "9" }, { name: "E", pc: 4, deg: "11" },
       ]},
@@ -2438,7 +2663,7 @@
         { name: "E", pc: 4, deg: "9" }, { name: "F", pc: 5, deg: "b3" }, { name: "G", pc: 7, deg: "11" },
         { name: "A", pc: 9, deg: "5" }, { name: "C", pc: 0, deg: "b7" }, { name: "E", pc: 4, deg: "9" }, { name: "G", pc: 7, deg: "11" },
       ]},
-      { id: "Am11", lh: [{ name: "A", pc: 9 }, { name: "E", pc: 4 }], rh: [
+      { id: "Am11", lh: [{ name: "A", pc: 9 }, { name: "E", pc: 4 }, { name: "G", pc: 7 }], rh: [
         { name: "B", pc: 11, deg: "9" }, { name: "C", pc: 0, deg: "b3" }, { name: "D", pc: 2, deg: "11" },
         { name: "E", pc: 4, deg: "5" }, { name: "G", pc: 7, deg: "b7" }, { name: "B", pc: 11, deg: "9" }, { name: "D", pc: 2, deg: "11" },
       ]},
@@ -2446,7 +2671,7 @@
         { name: "D", pc: 2, deg: "9" }, { name: "Eb", pc: 3, deg: "b3" }, { name: "F", pc: 5, deg: "11" },
         { name: "G", pc: 7, deg: "5" }, { name: "Bb", pc: 10, deg: "b7" }, { name: "D", pc: 2, deg: "9" }, { name: "F", pc: 5, deg: "11" },
       ]},
-      { id: "Gm11", lh: [{ name: "G", pc: 7 }, { name: "D", pc: 2 }], rh: [
+      { id: "Gm11", lh: [{ name: "G", pc: 7 }, { name: "D", pc: 2 }, { name: "F", pc: 5 }], rh: [
         { name: "A", pc: 9, deg: "9" }, { name: "Bb", pc: 10, deg: "b3" }, { name: "C", pc: 0, deg: "11" },
         { name: "D", pc: 2, deg: "5" }, { name: "F", pc: 5, deg: "b7" }, { name: "A", pc: 9, deg: "9" }, { name: "C", pc: 0, deg: "11" },
       ]},
@@ -2565,7 +2790,7 @@
       if (!chord) return;
 
       if (phase === "awaiting-root") {
-        if (isPcHeld(chord.lh[0].pc) && isPcHeld(chord.lh[1].pc)) {
+        if (chord.lh.every((n) => isPcHeld(n.pc))) {
           phase = "sequence";
           targetIdx = 0;
           lastEventTime = performance.now();
@@ -2643,7 +2868,7 @@
 
       progressEl.textContent = "chord " + ((chordIdx % seq.length) + 1) + " of " + seq.length;
       nameEl.textContent = chord.id;
-      lhEl.textContent = "LH pedal (hold): " + chord.lh[0].name + " + " + chord.lh[1].name;
+      lhEl.textContent = "LH pedal (hold): " + chord.lh.map((n) => n.name).join(" + ");
 
       if (phase === "sequence") {
         const target = chord.rh[targetIdx];
@@ -2651,7 +2876,7 @@
         noteEl.textContent = target.name;
       } else {
         labelEl.textContent = "play the root + 5th to begin";
-        noteEl.textContent = chord.lh[0].name + " + " + chord.lh[1].name;
+        noteEl.textContent = chord.lh.map((n) => n.name).join(" + ");
       }
 
       stripEl.innerHTML = chord.rh.map((n, i) => {
@@ -2925,6 +3150,502 @@
     });
 
     window.renderArpeggioTracking = renderArpTracking;
+  })();
+  </script>
+
+  <script>
+  (function () {
+    // ---------- Data ----------
+    // Reuses the exact same roots/qualities the Chord Drill tab uses, so
+    // "m7" here is the same m7 there -- no separate data to keep in sync.
+    const ROOTS = window.sharedRoots || [];
+    const ALL_QUALITIES = (window.sharedQualityGroups || []).reduce((acc, g) => acc.concat(g.qualities), []);
+
+    // Canonical minor-11th shape (root+5 pedal, 9-b3-11-5-b7-9-11 RH cell)
+    // used for Arpeggio mode here, expressed as intervals from the root so
+    // it can be transposed to any of the 12 keys. This is deliberately the
+    // plain canonical shape, not the per-chord customized pedal voicings
+    // from the fixed Arpeggios tab -- the point of Root Cycling is testing
+    // one consistent idea across random keys, not 12 idiomatic voicings.
+    const ARP_LH_IV = [0, 7];
+    const ARP_RH_IV = [
+      { deg: "9", iv: 2 }, { deg: "b3", iv: 3 }, { deg: "11", iv: 5 },
+      { deg: "5", iv: 7 }, { deg: "b7", iv: 10 }, { deg: "9", iv: 2 }, { deg: "11", iv: 5 },
+    ];
+
+    const SHARP_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    function noteNameForPc(pc) { return SHARP_NAMES[((pc % 12) + 12) % 12]; }
+    function rootByPc(pc) { return ROOTS.find((r) => r.pc === pc); }
+
+    // ---------- Persistence ----------
+    const POOL_KEY = "blocked-drill-rootcycle-pool";
+    const PREF_KEY = "blocked-drill-rootcycle-prefs";
+    const LOG_KEY = "blocked-drill-rootcycle-log";
+    const LOG_MAX = 5000;
+
+    function loadPool() {
+      try {
+        const raw = localStorage.getItem(POOL_KEY);
+        if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr) && arr.length) return arr; }
+      } catch (e) { /* fresh */ }
+      return ROOTS.map((r) => r.pc);
+    }
+    function savePool() { try { localStorage.setItem(POOL_KEY, JSON.stringify(includedPcs)); } catch (e) { /* ignore */ } }
+
+    function loadPrefs() {
+      try {
+        const raw = localStorage.getItem(PREF_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) { /* fresh */ }
+      return { practiceType: "chord", qualityIdx: 0 };
+    }
+    function savePrefs() {
+      try { localStorage.setItem(PREF_KEY, JSON.stringify({ practiceType, qualityIdx })); } catch (e) { /* ignore */ }
+    }
+
+    function loadLog() {
+      try { const raw = localStorage.getItem(LOG_KEY); return raw ? JSON.parse(raw) : []; }
+      catch (e) { return []; }
+    }
+    function logAttempt(entry) {
+      const log = loadLog();
+      log.push(entry);
+      const trimmed = log.length > LOG_MAX ? log.slice(log.length - LOG_MAX) : log;
+      try { localStorage.setItem(LOG_KEY, JSON.stringify(trimmed)); } catch (e) { /* ignore */ }
+    }
+
+    // ---------- Live state ----------
+    let includedPcs = loadPool();
+    const prefs = loadPrefs();
+    let practiceType = prefs.practiceType === "arpeggio" ? "arpeggio" : "chord";
+    let qualityIdx = Number.isInteger(prefs.qualityIdx) ? prefs.qualityIdx : 0;
+
+    let currentRootPc = null;
+    let running = false;
+    let phase = "idle"; // chord: idle|armed|timing|success -- arpeggio: idle|awaiting-root|sequence
+    let armStartTime = null;
+    let targetIdx = 0;
+    let lastEventTime = null;
+    let repCount = 0;
+    let missCount = 0;
+    let recentHistory = [];
+    let sinceArmFirstNote = true;
+    let tabActive = false;
+    let liveTimerInterval = null;
+    let customizeOpen = false;
+
+    const heldPcCounts = new Map();
+    function noteOnPc(pc) { heldPcCounts.set(pc, (heldPcCounts.get(pc) || 0) + 1); }
+    function noteOffPc(pc) {
+      const c = (heldPcCounts.get(pc) || 0) - 1;
+      if (c <= 0) heldPcCounts.delete(pc); else heldPcCounts.set(pc, c);
+    }
+    function heldPcSet() { return new Set(heldPcCounts.keys()); }
+
+    function currentQuality() { return ALL_QUALITIES[qualityIdx] || ALL_QUALITIES[0]; }
+
+    function pickRandomRoot(excludePc) {
+      if (!includedPcs.length) return null;
+      if (includedPcs.length === 1) return includedPcs[0];
+      let choice;
+      do { choice = includedPcs[Math.floor(Math.random() * includedPcs.length)]; } while (choice === excludePc);
+      return choice;
+    }
+
+    function armRep(isFirstEver) {
+      const nextPc = pickRandomRoot(isFirstEver ? null : currentRootPc);
+      currentRootPc = nextPc;
+      missCount = 0;
+      recentHistory = [];
+      sinceArmFirstNote = true;
+      lastEventTime = null;
+      targetIdx = 0;
+
+      if (currentRootPc === null) {
+        phase = "idle";
+        renderRC();
+        return;
+      }
+
+      if (practiceType === "chord") {
+        phase = heldPcSet().size === 0 ? "timing" : "armed";
+        if (phase === "timing") armStartTime = performance.now();
+      } else {
+        phase = "awaiting-root";
+      }
+      renderRC();
+    }
+
+    function startDrillRC() {
+      running = true;
+      armRep(true);
+    }
+    function stopDrillRC() {
+      running = false;
+      phase = "idle";
+      currentRootPc = null;
+      renderRC();
+    }
+    function skipToNextRootRC() {
+      if (!running) return;
+      armRep(false);
+    }
+
+    // ---------- MIDI handling ----------
+    function handleNoteOn(pc) {
+      if (!tabActive || !running || currentRootPc === null) return;
+      const root = rootByPc(currentRootPc);
+      if (!root) return;
+
+      if (practiceType === "chord") {
+        const target = currentQuality();
+        const targetSet = new Set(target.tones.map((t) => (root.pc + t) % 12));
+        if (phase === "armed") return; // still waiting for hands to lift; note-on here just re-extends the hold
+        if (phase === "timing") {
+          const held = heldPcSet();
+          if (held.size === targetSet.size) {
+            const matches = [...held].every((p) => targetSet.has(p));
+            if (matches) {
+              const elapsed = performance.now() - armStartTime;
+              logAttempt({ mode: "chord", label: root.name + target.suffix, root: root.name, ms: Math.round(elapsed), ts: Date.now() });
+              recentHistory = [{ label: root.name + target.suffix, ms: elapsed }];
+              phase = "success";
+              repCount += 1;
+              renderRC();
+            } else {
+              missCount += 1;
+              renderRCLiveStats();
+            }
+          }
+        }
+        return;
+      }
+
+      // Arpeggio mode
+      if (phase === "awaiting-root") {
+        const lhPcs = ARP_LH_IV.map((iv) => (root.pc + iv) % 12);
+        if (lhPcs.every((p) => heldPcCounts.has(p))) {
+          phase = "sequence";
+          targetIdx = 0;
+          lastEventTime = performance.now();
+          renderRC();
+        }
+        return;
+      }
+      if (phase === "sequence") {
+        const target = ARP_RH_IV[targetIdx];
+        const targetPc = (root.pc + target.iv) % 12;
+        if (pc === targetPc) {
+          const now = performance.now();
+          const elapsed = lastEventTime ? now - lastEventTime : 0;
+          const fromLabel = sinceArmFirstNote ? "Root" : ARP_RH_IV[(targetIdx - 1 + ARP_RH_IV.length) % ARP_RH_IV.length].deg;
+          logAttempt({ mode: "arpeggio", label: "m11-idea", root: root.name, fromDeg: fromLabel, toDeg: target.deg, ms: Math.round(elapsed), ts: Date.now() });
+          recentHistory = [...recentHistory, { label: fromLabel + "\u2192" + target.deg, ms: elapsed }].slice(-6);
+          lastEventTime = now;
+          sinceArmFirstNote = false;
+          targetIdx = (targetIdx + 1) % ARP_RH_IV.length;
+          if (targetIdx === 0) repCount += 1;
+          renderRC();
+        } else {
+          missCount += 1;
+          renderRCLiveStats();
+        }
+      }
+    }
+
+    window.addEventListener("midi-note-on", (ev) => { noteOnPc(ev.detail.pc); handleNoteOn(ev.detail.pc); });
+    window.addEventListener("midi-note-off", (ev) => {
+      noteOffPc(ev.detail.pc);
+      if (!tabActive || !running) return;
+      if (practiceType === "chord" && phase === "armed" && heldPcSet().size === 0) {
+        phase = "timing";
+        armStartTime = performance.now();
+        renderRC();
+      }
+    });
+
+    // ---------- Render ----------
+    function renderRC() {
+      const root = currentRootPc === null ? null : rootByPc(currentRootPc);
+      const promptLabel = document.getElementById("rcPromptLabel");
+      const promptName = document.getElementById("rcPromptName");
+      const subRow = document.getElementById("rcSubRow");
+      const cellStrip = document.getElementById("rcCellStrip");
+      const historyEl = document.getElementById("rcHistory");
+
+      if (!root) {
+        promptLabel.textContent = includedPcs.length ? "press start" : "no roots selected -- use Customize roots";
+        promptName.textContent = "\u2014";
+        subRow.textContent = "";
+        cellStrip.innerHTML = "";
+        historyEl.textContent = "";
+        renderRCLiveStats();
+        return;
+      }
+
+      if (practiceType === "chord") {
+        const q = currentQuality();
+        promptLabel.textContent =
+          phase === "armed" ? "lift your hands fully off the keys" :
+          phase === "timing" ? "play it" :
+          phase === "success" ? "\u2713 nice -- skip to the next root" : "play the root + 5th to begin";
+        promptName.textContent = root.name + q.suffix;
+        subRow.textContent = "";
+        cellStrip.innerHTML = "";
+      } else {
+        const lhNames = ARP_LH_IV.map((iv) => noteNameForPc((root.pc + iv) % 12)).join(" + ");
+        subRow.textContent = "LH pedal (hold): " + lhNames;
+        if (phase === "sequence") {
+          const t = ARP_RH_IV[targetIdx];
+          promptLabel.textContent = "next (" + t.deg + ")";
+          promptName.textContent = noteNameForPc((root.pc + t.iv) % 12);
+        } else {
+          promptLabel.textContent = "play the root + 5th to begin";
+          promptName.textContent = lhNames;
+        }
+        cellStrip.innerHTML = ARP_RH_IV.map((n, i) => {
+          let cls = "arp-cell-chip";
+          if (phase === "sequence" && i === targetIdx) cls += " arp-cell-current";
+          else if (phase === "sequence" && i < targetIdx) cls += " arp-cell-done";
+          return '<span class="' + cls + '">' + n.deg + "</span>";
+        }).join("");
+      }
+
+      historyEl.textContent = recentHistory.length
+        ? recentHistory.map((h) => h.label + " " + (h.ms / 1000).toFixed(2) + "s").join("  \u00b7  ")
+        : "play through a root to see times here";
+
+      renderRCLiveStats();
+    }
+
+    function renderRCLiveStats() {
+      document.getElementById("rcRepCount").textContent = String(repCount);
+      document.getElementById("rcMissCount").textContent = String(missCount);
+      const timerEl = document.getElementById("rcLiveTimer");
+      if (practiceType === "chord" && phase === "timing" && armStartTime) {
+        timerEl.textContent = ((performance.now() - armStartTime) / 1000).toFixed(2) + "s";
+      } else if (practiceType === "arpeggio" && phase === "sequence" && lastEventTime) {
+        timerEl.textContent = ((performance.now() - lastEventTime) / 1000).toFixed(2) + "s";
+      } else {
+        timerEl.textContent = "\u2014";
+      }
+    }
+
+    function startLiveTimerInterval() { stopLiveTimerInterval(); liveTimerInterval = setInterval(renderRCLiveStats, 100); }
+    function stopLiveTimerInterval() { if (liveTimerInterval) { clearInterval(liveTimerInterval); liveTimerInterval = null; } }
+
+    function renderRCTypeSeg() {
+      const seg = document.getElementById("rcTypeSeg");
+      seg.innerHTML = "";
+      [{ value: "chord", label: "Chord" }, { value: "arpeggio", label: "Arpeggio" }].forEach((opt) => {
+        const btn = document.createElement("button");
+        btn.className = "seg seg-btn" + (practiceType === opt.value ? " seg-btn-active" : "");
+        btn.textContent = opt.label;
+        btn.onclick = () => { practiceType = opt.value; savePrefs(); stopDrillRC(); renderRCTypeSeg(); renderRCQualityGroup(); };
+        seg.appendChild(btn);
+      });
+    }
+
+    function renderRCQualityGroup() {
+      document.getElementById("rcQualityGroup").style.display = practiceType === "chord" ? "flex" : "none";
+      const seg = document.getElementById("rcQualitySeg");
+      seg.innerHTML = "";
+      ALL_QUALITIES.forEach((q, i) => {
+        const btn = document.createElement("button");
+        btn.className = "seg seg-btn" + (qualityIdx === i ? " seg-btn-active" : "");
+        btn.textContent = q.suffix;
+        btn.onclick = () => { qualityIdx = i; savePrefs(); stopDrillRC(); renderRCQualityGroup(); };
+        seg.appendChild(btn);
+      });
+    }
+
+    function renderRCCustomizeList() {
+      const listEl = document.getElementById("rcCustomizeList");
+      listEl.innerHTML = ROOTS.map((r) => {
+        const included = includedPcs.includes(r.pc);
+        return '<div class="arp-customize-row' + (included ? "" : " arp-excluded") + '" data-pc="' + r.pc + '">' +
+          '<input type="checkbox" ' + (included ? "checked" : "") + ' data-role="include" />' +
+          '<span class="arp-customize-name">' + r.name + "</span>" +
+          "</div>";
+      }).join("");
+      listEl.querySelectorAll('[data-role="include"]').forEach((cb) => {
+        cb.addEventListener("change", () => {
+          const pc = Number(cb.closest(".arp-customize-row").getAttribute("data-pc"));
+          if (cb.checked) { if (!includedPcs.includes(pc)) includedPcs.push(pc); }
+          else includedPcs = includedPcs.filter((p) => p !== pc);
+          savePool();
+          renderRCCustomizeList();
+          if (running) stopDrillRC();
+        });
+      });
+    }
+
+    // ---------- Bindings ----------
+    document.getElementById("rcStartBtn").addEventListener("click", startDrillRC);
+    document.getElementById("rcStopBtn").addEventListener("click", stopDrillRC);
+    document.getElementById("rcNextBtn").addEventListener("click", skipToNextRootRC);
+    document.getElementById("rcCustomizeBtn").addEventListener("click", () => {
+      customizeOpen = !customizeOpen;
+      document.getElementById("rcCustomizeCard").style.display = customizeOpen ? "flex" : "none";
+      if (customizeOpen) renderRCCustomizeList();
+    });
+    document.getElementById("rcCustomizeDoneBtn").addEventListener("click", () => {
+      customizeOpen = false;
+      document.getElementById("rcCustomizeCard").style.display = "none";
+    });
+    document.getElementById("rcResetRootsBtn").addEventListener("click", () => {
+      includedPcs = ROOTS.map((r) => r.pc);
+      savePool();
+      renderRCCustomizeList();
+      if (running) stopDrillRC();
+    });
+
+    window.onRootCycleTabVisibility = function (active) {
+      tabActive = active;
+      if (active) { startLiveTimerInterval(); renderRC(); }
+      else stopLiveTimerInterval();
+    };
+
+    // ---------- Tracking: Root Cycling sub-tab ----------
+    // Groups chord-mode attempts by quality (stripping the root off the
+    // stored label) and arpeggio-mode attempts by transition, so the chart
+    // shows "am I getting faster at this idea across random keys" rather
+    // than 12 separate near-identical series. Each point's tooltip still
+    // shows which root that specific attempt was in.
+    let selectedRCKey = null;
+
+    function rcGroupKey(e) {
+      if (e.mode === "chord") {
+        const suffix = (e.root && e.label.startsWith(e.root)) ? e.label.slice(e.root.length) : e.label;
+        return "Chord \u00b7 " + suffix;
+      }
+      return "Arpeggio \u00b7 " + e.fromDeg + "\u2192" + e.toDeg;
+    }
+
+    function renderRCTrackingList() {
+      const listEl = document.getElementById("rcTrackingList");
+      const log = loadLog();
+      const groups = {};
+      log.forEach((e) => { (groups[rcGroupKey(e)] = groups[rcGroupKey(e)] || []).push(e); });
+      const keys = Object.keys(groups).sort((a, b) => {
+        const la = groups[a][groups[a].length - 1].ts;
+        const lb = groups[b][groups[b].length - 1].ts;
+        return lb - la;
+      });
+
+      if (!keys.length) {
+        listEl.innerHTML = '<div class="tracking-empty">No Root Cycling attempts logged yet.<br>Play a few rounds on the Root Cycling tab to start building this.</div>';
+        selectedRCKey = null;
+        return;
+      }
+      if (!selectedRCKey || !groups[selectedRCKey]) selectedRCKey = keys[0];
+
+      listEl.innerHTML = keys.map((k) => {
+        const entries = groups[k];
+        const last = entries[entries.length - 1];
+        return '<div class="tracking-chord-row' + (k === selectedRCKey ? " active" : "") + '" data-key="' + k.replace(/"/g, "&quot;") + '">' +
+          '<span class="tracking-chord-name">' + k + "</span>" +
+          '<span class="tracking-chord-meta">' + entries.length + " \u00b7 " + (last.ms / 1000).toFixed(2) + "s</span>" +
+          "</div>";
+      }).join("");
+
+      listEl.querySelectorAll(".tracking-chord-row").forEach((row) => {
+        row.addEventListener("click", () => { selectedRCKey = row.getAttribute("data-key"); renderRootCycleTracking(); });
+      });
+    }
+
+    function rcBuildYTicks(maxMs) {
+      const maxSec = Math.max(1, maxMs / 1000);
+      const niceMax = Math.ceil(maxSec * 1.15 * 2) / 2;
+      const steps = 4;
+      const ticks = [];
+      for (let i = 0; i <= steps; i++) ticks.push(Math.round((niceMax * i / steps) * 100) / 100);
+      return { niceMax, ticks };
+    }
+
+    function renderRCChart(entries) {
+      const svg = document.getElementById("rcChartSvg");
+      const tooltip = document.getElementById("rcTooltip");
+      const W = 720, H = 320, ML = 46, MR = 16, MT = 16, MB = 34;
+      const plotW = W - ML - MR, plotH = H - MT - MB;
+
+      if (!entries.length) {
+        svg.innerHTML = '<text x="' + (W / 2) + '" y="' + (H / 2) + '" text-anchor="middle" fill="#7A7156" font-family="Inter, sans-serif" font-size="13">No attempts logged for this yet</text>';
+        return;
+      }
+
+      const maxMs = Math.max(...entries.map((e) => e.ms));
+      const { niceMax, ticks } = rcBuildYTicks(maxMs);
+      const n = entries.length;
+      const xFor = (i) => ML + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1));
+      const yFor = (ms) => MT + plotH - (plotH * (ms / 1000)) / niceMax;
+
+      const parts = [];
+      ticks.forEach((t) => {
+        const y = yFor(t * 1000);
+        parts.push('<line x1="' + ML + '" y1="' + y + '" x2="' + (W - MR) + '" y2="' + y + '" stroke="#2c2820" stroke-width="1" />');
+        parts.push('<text x="' + (ML - 8) + '" y="' + (y + 4) + '" text-anchor="end" fill="#7A7156" font-family="JetBrains Mono, monospace" font-size="10">' + t.toFixed(1) + "s</text>");
+      });
+
+      const linePoints = entries.map((e, i) => xFor(i) + "," + yFor(e.ms)).join(" ");
+      parts.push('<polyline points="' + linePoints + '" fill="none" stroke="#4a4432" stroke-width="1.5" />');
+
+      entries.forEach((e, i) => {
+        const x = xFor(i), y = yFor(e.ms);
+        parts.push('<circle cx="' + x + '" cy="' + y + '" r="5" fill="#7C9CBF" stroke="#16140F" stroke-width="1.5" data-idx="' + i + '" class="tp" />');
+      });
+
+      parts.push('<text x="' + (ML + plotW / 2) + '" y="' + (H - 6) + '" text-anchor="middle" fill="#7A7156" font-family="Inter, sans-serif" font-size="11">attempt \u2116 (chronological) \u2014 ' + n + ' total</text>');
+      svg.innerHTML = parts.join("");
+
+      svg.querySelectorAll(".tp").forEach((circle) => {
+        circle.addEventListener("mouseenter", () => {
+          const idx = Number(circle.getAttribute("data-idx"));
+          const e = entries[idx];
+          const date = new Date(e.ts);
+          tooltip.innerHTML = e.root + " \u00b7 " + (e.ms / 1000).toFixed(2) + "s<br>" + date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          tooltip.style.display = "block";
+          const rect = svg.getBoundingClientRect();
+          tooltip.style.left = (circle.cx.baseVal.value * (rect.width / W)) + "px";
+          tooltip.style.top = (circle.cy.baseVal.value * (rect.height / H)) + "px";
+        });
+        circle.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+      });
+    }
+
+    function renderRCRootBreakdown(entries) {
+      const el = document.getElementById("rcRootBreakdown");
+      if (!entries.length) { el.textContent = ""; return; }
+      const counts = {};
+      entries.forEach((e) => { counts[e.root] = (counts[e.root] || 0) + 1; });
+      const parts = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).map((r) => r + " (\u00d7" + counts[r] + ")");
+      el.textContent = "roots practiced: " + parts.join(", ");
+    }
+
+    function renderRootCycleTracking() {
+      renderRCTrackingList();
+      const log = loadLog().filter((e) => rcGroupKey(e) === selectedRCKey).sort((a, b) => a.ts - b.ts);
+      document.getElementById("rcChartTitle").textContent = selectedRCKey || "\u2014";
+      document.getElementById("rcChartSub").textContent = log.length
+        ? log.length + " attempt" + (log.length === 1 ? "" : "s") + " recorded"
+        : "";
+      renderRCChart(log);
+      renderRCRootBreakdown(log);
+    }
+
+    document.getElementById("rcTrackingClearBtn").addEventListener("click", () => {
+      if (!selectedRCKey) return;
+      const log = loadLog().filter((e) => rcGroupKey(e) !== selectedRCKey);
+      try { localStorage.setItem(LOG_KEY, JSON.stringify(log)); } catch (e) { /* ignore */ }
+      selectedRCKey = null;
+      renderRootCycleTracking();
+    });
+
+    window.renderRootCycleTracking = renderRootCycleTracking;
+
+    renderRCTypeSeg();
+    renderRCQualityGroup();
+    renderRC();
   })();
   </script>
 </body>

@@ -12,8 +12,10 @@ A multi-tool setup for drilling chords and progressions on a MIDI keyboard with 
 
 | File | What it is |
 |------|-----------|
-| `reflexDrillExt.html` | Main web app — blocked-practice chord drill with timer, stats, AnkiConnect flip, and optional time-based auto-grading. Includes **Welcome**, **Chord Drill**, **Arpeggios**, and **Tracking** tabs, plus a link to the Progression Drill. |
+| `reflexDrillExt.html` | Main web app — blocked-practice chord drill with timer, stats, AnkiConnect flip, and optional time-based auto-grading. Includes **Welcome**, **Chord Drill**, **Arpeggios**, **Root Cycling**, and **Tracking** tabs, plus a link to the Progression Drill. |
 | `progression-drill.html` | Companion web app — ii-V-I and 12-bar blues progression drill with loop timing. Shares the same top navigation bar so it feels like part of the same site. |
+| `chord-symbols-CGDAEno11.txt` | Ready-to-import Anki deck — root-position 7ths and dim7 in C, G, D, A, E (tab-separated Basic notetype) |
+| `chord-symbols-CGDAE.txt` | Ready-to-import Anki deck — extended 9/11/13 voicings with LH/RH fingering in C, G, D, A, E (tab-separated Basic notetype) |
 | `anki_midi_chord_trainer.py` | Python script — auto-checks your played chords against Anki cards during reviews |
 
 ---
@@ -27,18 +29,23 @@ All tools listen to your **MIDI keyboard**, but they serve different practice go
 Best for **speed and muscle-memory drilling** on a single chord or chord family.
 
 - Open it in any browser (served locally via `python3 -m http.server`).
-- Use the **Welcome** tab to read the landing page, the **Chord Drill** tab to drill full chords, the **Arpeggios** tab to drill arpeggio cells, or the **Progression** link to switch to the progression drill.
+- Use the **Welcome** tab to read the landing page, the **Chord Drill** tab to drill full chords, the **Arpeggios** tab to drill arpeggio cells, the **Root Cycling** tab to drill random roots, or the **Progression** link to switch to the progression drill.
 - Connect your MIDI keyboard and pick a chord (root + quality).
 - Press **Start**, lift your hands, then play the chord as fast as you can.
 - The timer starts the moment you release all keys and stops when you play the correct notes.
-- Do **N reps** (8 / 12 / 16 / 20) per round. It tracks your **best single rep** and **best round average**.
+- Do **N reps** (1 / 5 / 8 / 12 / 16 / 20, or any custom number) per round. It tracks your **best single rep** and **best round average**.
 - When you finish a round, it **automatically flips the current Anki card** so you can grade it.
 - Modes:
   - **Single Shape** — drill one specific chord
   - **Family Cycle** — cycle through maj7 → 7 → m7 → m7b5 → dim7
   - **Extended Family** — include 9ths, 11ths, and 13ths
 - Toggle **Show/Hide** chord notes if you want to test recognition vs. muscle memory.
+- **Reveal on Finish** — even with chord notes hidden, briefly show them the moment you complete a round to confirm what you played without giving the answer away beforehand.
+- **Countdown on Start** — when on, clicking **Start** runs the same countdown used by Automatic Timer before the timer begins.
+- **Hover tooltips** — every control label has a `?` tooltip explaining what it does, so the UI is self-documenting.
 - **Anki Sync** — turn on "Follow card" and the app polls AnkiConnect for the current review card. When the card changes, the app parses the chord on the front (e.g. `Gm7`, `Cmaj7`, `F#m9(maj7)`) and automatically selects it for you.
+  - On the **first successful connection** each session, the app applies recommended hands-free defaults: Automatic Timer On, countdown 3 s, Hide Until Go On, Break Before Grading 5 s (tick muted), and Auto-Grade On. This only happens once per Follow toggle, so it won't overwrite settings you change by hand.
+  - Shows a small deck-stats line (new / learning / due counts) for the deck the current card belongs to, refreshed on the same poll cycle.
 - **Automatic Timer** — when Anki Sync is following a card, a new card automatically triggers a countdown and starts the drill hands-free.
   - The countdown length is editable (default 3 s) and persists across sessions.
   - **Hide until go** masks the big chord symbol and the Anki Sync status line during the countdown, then reveals them the instant the timer starts.
@@ -50,16 +57,21 @@ Best for **speed and muscle-memory drilling** on a single chord or chord family.
   - **Good** if under the "good" threshold (default 2.0 s)
   - **Hard** if under the "hard" threshold (default 4.0 s)
   - **Again** otherwise
-  - A persistent grade status badge next to the Auto-Grade toggle shows **No grade sent yet** → **Sending to Anki…** → **Last sent: Good (1.42 s)** and stays on screen until the next grade actually replaces it.
+  - A persistent grade status badge above the chord card shows **No grade sent yet** → **Sending to Anki…** → **Last sent: Good (1.42 s)** and stays on screen until the next grade actually replaces it.
   - Thresholds, break seconds, countdown seconds, and the break-countdown tick-sound preference all persist across sessions. The Auto-Grade, Automatic Timer, Hide-until-go, and Anki Sync toggles themselves reset to off on reload so nothing auto-grades or auto-hides silently.
 - **Arpeggios tab** — practice 7-note minor-11 arpeggio cells with a two-phase drill:
   - Twelve built-in chords (e.g. `Bbm11`, `Fm11`, `Gm11`) in a default order; customize which chords are included and reorder them with up/down arrows.
-  - **Root phase:** hold the left-hand root + 5th to arm the timer.
+  - **Root phase:** hold the left-hand pedal to arm the timer. Each chord uses the voicing given in the source table — most are root + 5th, some add the b7, and one (`F#m11`) is root + b7 with no 5th.
   - **Sequence phase:** play each note of the right-hand cell in order. The cell loops indefinitely until you hit **Next chord**.
   - Live display shows the next target note/degree, a 7-chip position strip, lap count, miss count, and a scrolling transition-time history.
   - Shares the same MIDI connection as the Chord Drill tab — connect MIDI once and it works for both.
   - **Flash on Miss** toggle (persisted): a wrong note during the sequence briefly flashes the target display red and is logged for review.
-- **Tracking tab** — split into **Chord Drill** and **Arpeggios** sub-tabs:
+- **Root Cycling tab** — drill one fixed idea across random roots, so you're testing "can I find this anywhere" instead of "do I know this shape in order":
+  - **Chord mode** — pick a quality (e.g. `m7`) and play it as a block chord in a random key each rep.
+  - **Arpeggio mode** — drill the canonical minor-11th shape transposed to a random root each rep.
+  - Customize which of the 12 roots are eligible; the same root never repeats back-to-back.
+  - Reaction times are logged to their own localStorage key and shown in the **Tracking → Root Cycling** sub-tab.
+- **Tracking tab** — split into **Chord Drill**, **Arpeggios**, and **Root Cycling** sub-tabs:
   - **Chord Drill** tracker: every first-chord attempt is logged to a separate localStorage key so you can visualize progress over time, without disturbing the rolling-best stats.
     - Each log entry stores the chord symbol, reaction time, timestamp, redo flag, and (once known) the Anki grade.
     - Grades are patched onto the entry **after** the round completes and Auto-Grade succeeds; attempts without Auto-Grade stay "ungraded".
@@ -73,6 +85,11 @@ Best for **speed and muscle-memory drilling** on a single chord or chord family.
     - Click a transition to see an SVG time-series chart of its transition times plus a breakdown of exactly which wrong notes were played instead (e.g. "played D instead (×2)").
     - Transitions that only have misses and no successful attempts still appear, so weak spots don't get hidden.
     - Miss events and successful transitions are stored in separate localStorage keys, each capped to keep storage healthy.
+  - **Root Cycling** tracker: review random-root reaction times.
+    - Left list groups attempts by the fixed idea drilled, not by root — e.g. `Chord · m7` or `Arpeggio · 9→b3` — so you see whether you're getting faster at the *shape* across all keys.
+    - Click an idea to see an SVG time-series chart of every attempt; hover any point to see exactly which root that attempt was in.
+    - A root-breakdown line shows how many times you've practiced each root for the selected idea, so you can spot uneven coverage.
+    - Logs are capped at the most recent 5,000 entries.
 
 ### `progression-drill.html` — Progression Drill
 
@@ -88,6 +105,7 @@ Best for **moving between chords smoothly** in a harmonic context, not just one 
 - Tracks **loop count**, **best single transition**, and **best loop average**.
 - Shows the **matching scale** for your right hand (Dorian for m7, Mixolydian for dom7, Ionian for maj7).
 - Uses Tone.js for audio chimes on each correct chord and loop completion.
+- Hover over the **Progression** and **Key** labels to see tooltip explanations of what each control does and how practice history is tracked.
 
 **How to practice with it:**
 1. Start with left hand only — comp the chords as block chords, focusing on smooth motion between shapes.
@@ -115,6 +133,8 @@ Best for **actual Anki review sessions** where you want the computer to check yo
 | Cycle through chord families | `reflexDrillExt.html` |
 | Track rep times and PBs | `reflexDrillExt.html` |
 | Drill minor-11 arpeggio cells | `reflexDrillExt.html` |
+| Drill random-root chord/arpeggio recall | `reflexDrillExt.html` |
+| Import companion Anki deck | `chord-symbols-CGDAEno11.txt` / `chord-symbols-CGDAE.txt` |
 | Practice ii-V-I transitions | `progression-drill.html` |
 | Practice 12-bar blues form | `progression-drill.html` |
 | Loop progressions with timing | `progression-drill.html` |
@@ -145,11 +165,14 @@ Both HTML apps need to be served locally for Web MIDI to work. You can also use 
    python3 -m http.server 8766
    ```
 2. Open the main app in your browser:
-   - `reflexDrillExt.html` has **Welcome**, **Chord Drill**, **Arpeggios**, **Tracking**, and a **Progression** link.
+   - `reflexDrillExt.html` has **Welcome**, **Chord Drill**, **Arpeggios**, **Root Cycling**, **Tracking**, and a **Progression** link.
    - You can also open the progression drill directly at `http://localhost:8766/progression-drill.html`; the same navigation bar links back to the main app.
 3. Click **Connect MIDI Keyboard** and allow MIDI access when prompted.
-4. (Optional) Turn on **Anki Sync → Follow card** to have the app auto-select the chord shown on Anki's current card.
-5. Select your settings and press **Start**.
+4. (Optional) Import the companion decks into Anki:
+   - In Anki: `File → Import`, pick `chord-symbols-CGDAEno11.txt` or `chord-symbols-CGDAE.txt`.
+   - The files are pre-configured tab-separated imports for the **Basic** notetype and will create decks under `Piano::Chord Symbols ...`.
+5. (Optional) Turn on **Anki Sync → Follow card** to have the app auto-select the chord shown on Anki's current card.
+6. Select your settings and press **Start**.
 
 > **Tip:** You can also create desktop shortcuts / taskbar icons that auto-start the server and open the browser. See the launcher scripts below.
 
@@ -161,6 +184,17 @@ When **Follow card** is enabled, the app reads the rendered front of the current
 - Sharps are mapped to their enharmonic flat roots (`C#m7` becomes `Dbm7`).
 
 If the card front doesn't contain a recognizable chord, the status line will say "Card found, no chord parsed".
+
+### Companion Anki decks
+
+Two ready-to-import decks ship with the repo and are linked from the Welcome page:
+
+| File | Contents |
+|------|----------|
+| `chord-symbols-CGDAEno11.txt` | Root-position maj7, m7, dom7, m7b5, and dim7 in C, G, D, A, E |
+| `chord-symbols-CGDAE.txt` | Extended maj9, m9, 9, maj11, m11, 11, maj13, m13, 13 voicings in C, G, D, A, E with LH/RH fingering |
+
+Both are plain tab-separated Anki exports for the **Basic** notetype. Import via Anki's `File → Import` and they will create decks under `Piano::Chord Symbols ...`. The front of each card is just the chord symbol, so the app's **Anki Sync → Follow card** feature can parse it directly.
 
 ---
 
