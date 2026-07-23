@@ -263,7 +263,7 @@
     font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7A7156;
   }
 
-  .grade-badge-row { display: flex; justify-content: center; margin-bottom: 12px; }
+  .grade-badge-row { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 12px; }
   .grade-pill {
     font-family: 'Inter', sans-serif; font-size: 12.5px; font-weight: 600;
     border-radius: 999px; padding: 5px 14px; display: inline-flex; align-items: center; gap: 6px;
@@ -274,7 +274,7 @@
   .grade-pill-pending { color: #16140F; background: #A79B85; border: 1px solid #A79B85; }
   .grade-pill-none    { color: #7A7156; background: #211E17; border: 1px solid #34301F; }
 
-  .deck-stats-row { display: flex; justify-content: center; gap: 10px; margin-top: 8px; }
+  .deck-stats-row { display: flex; justify-content: center; gap: 10px; }
   .deck-stat-pill {
     display: flex; align-items: center; gap: 6px;
     background: #211E17; border: 1px solid #34301F; border-radius: 999px;
@@ -1160,8 +1160,6 @@
     history: {},
 
     ankiFollow: false,
-    lastCardId: null,
-    expectingNextCard: false,
     detectedChord: null,
     ankiSyncStatus: "Follow off",
     deckStats: { new: null, learn: null, review: null, total: null },
@@ -1640,39 +1638,17 @@
 
       if (data.error) {
         state.ankiSyncStatus = `Anki: ${data.error}`;
-        state.lastCardId = null;
-        state.expectingNextCard = false;
         renderAnkiSync();
         return;
       }
 
       const cardId = data.result && data.result.cardId;
       if (!cardId) {
-        if (state.expectingNextCard) {
-          state.ankiSyncStatus = "Deck finished — no more cards";
-          state.expectingNextCard = false;
-        } else {
-          state.ankiSyncStatus = "Not currently reviewing a card";
-        }
-        state.lastCardId = null;
+        state.ankiSyncStatus = "Not currently reviewing a card";
         renderAnkiSync();
         return;
       }
 
-      if (state.expectingNextCard && cardId === state.lastCardId) {
-        state.ankiSyncStatus = "Waiting for next Anki card…";
-        const ds = state.deckStats;
-        if (ds && ds.new != null && ds.new + ds.learn + ds.review === 0) {
-          state.ankiSyncStatus = "Deck finished — no more cards";
-          state.expectingNextCard = false;
-        }
-        renderAnkiSync();
-        return;
-      }
-
-      // New/different card arrived.
-      state.expectingNextCard = false;
-      state.lastCardId = cardId;
       const question = data.result.question || "";
       const parsed = parseChordFromText(question);
       const deckName = data.result.deckName || null;
@@ -1689,7 +1665,6 @@
       if (deckName) fetchDeckStats(deckName);
     } catch (e) {
       state.ankiSyncStatus = "Anki not reachable";
-      state.lastCardId = null;
       renderAnkiSync();
     }
   }
@@ -1705,8 +1680,6 @@
       clearInterval(ankiPollId);
       ankiPollId = null;
     }
-    state.lastCardId = null;
-    state.expectingNextCard = false;
     state.detectedChord = null;
     state.ankiSyncStatus = "Follow off";
     state.deckStats = { new: null, learn: null, review: null, total: null };
@@ -1923,7 +1896,7 @@
     // Auto-grade: only fires when the drill is actually locked to a specific
     // Anki card (Anki Sync on, a card was detected) so we never rate an
     // unrelated card that happens to be open in Anki's reviewer.
-    if (flipped && state.autoGrade && state.ankiFollow && state.lastCardId) {
+    if (flipped && state.autoGrade && state.ankiFollow && state.detectedChord) {
       state.gradeStatus = "pending";
       render();
       const result = gradeForTime(times[0]);
@@ -1932,7 +1905,6 @@
         state.lastGradeResult = { grade: result.label, ms: times[0] };
         state.gradeStatus = "sent";
         updateFirstChordLogGrade(state.pendingLogId, result.ease, result.label);
-        state.expectingNextCard = true;
         if (state.currentDeckName) fetchDeckStats(state.currentDeckName);
       } else {
         state.gradeStatus = "idle";
@@ -1993,7 +1965,6 @@
     if (state.mode === "family") state.qualityIdx = (state.qualityIdx + 1) % FAMILY.length;
     else if (state.mode === "extended") state.qualityIdx = (state.qualityIdx + 1) % EXTENDED.length;
     else state.qualityIdx = (state.qualityIdx + 1) % SINGLE_QUALITIES.length;
-    if (state.ankiFollow) state.expectingNextCard = true;
     render();
   }
 

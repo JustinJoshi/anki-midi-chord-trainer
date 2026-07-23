@@ -47,7 +47,6 @@ Best for **speed and muscle-memory drilling** on a single chord or chord family.
 - **Anki Sync** — turn on "Follow card" and the app polls AnkiConnect for the current review card. When the card changes, the app parses the chord on the front (e.g. `Gm7`, `Cmaj7`, `F#m9(maj7)`) and automatically selects it for you.
   - On the **first successful connection** each session, the app applies recommended hands-free defaults: Automatic Timer On, countdown 3 s, Hide Until Go On, Break Before Grading 5 s (tick muted), and Auto-Grade On. This only happens once per Follow toggle, so it won't overwrite settings you change by hand.
   - Shows a row of colored deck-stat pills (new / learning / due counts) directly below the grade-status badge for the deck the current card belongs to. Stats refresh when Follow card is turned on, on every new card, and after a successful auto-grade.
-  - **Last-card countdown fix** — after grading the final card, the app no longer gets stuck on the same `cardId`; it waits for the next Anki card and reports "Deck finished" when no more cards remain.
 - **Automatic Timer** — when Anki Sync is following a card, a new card automatically triggers a countdown and starts the drill hands-free.
   - The countdown length is editable (default 3 s) and persists across sessions.
   - **Hide until go** masks the big chord symbol and the Anki Sync status line during the countdown, then reveals them the instant the timer starts.
@@ -59,7 +58,7 @@ Best for **speed and muscle-memory drilling** on a single chord or chord family.
   - **Good** if under the "good" threshold (default 2.0 s)
   - **Hard** if under the "hard" threshold (default 4.0 s)
   - **Again** otherwise
-  - A persistent grade status badge above the chord card shows **No grade sent yet** → **Sending to Anki…** → **Last sent: Good (1.42 s)** and stays on screen until the next grade actually replaces it.
+  - A persistent grade status badge above the chord card shows **No grade sent yet** → **Sending to Anki…** → **Last sent: Good (1.42 s)** and stays on screen until the next grade actually replaces it. The current deck's new / learning / due counts sit centered directly below this badge.
   - **Celebrate Good** toggle (persisted) fires a brief confetti burst when your first-chord time is faster than your "good" threshold.
   - Thresholds, break seconds, countdown seconds, and the break-countdown tick-sound preference all persist across sessions. The Auto-Grade, Automatic Timer, Hide-until-go, and Anki Sync toggles themselves reset to off on reload so nothing auto-grades or auto-hides silently.
 - **Arpeggios tab** — practice 7-note minor-11 arpeggio cells with a two-phase drill:
