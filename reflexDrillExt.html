@@ -274,6 +274,18 @@
   .grade-pill-pending { color: #16140F; background: #A79B85; border: 1px solid #A79B85; }
   .grade-pill-none    { color: #7A7156; background: #211E17; border: 1px solid #34301F; }
 
+  .deck-stats-row { display: flex; justify-content: center; gap: 10px; margin-top: 8px; }
+  .deck-stat-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: #211E17; border: 1px solid #34301F; border-radius: 999px;
+    padding: 6px 12px; font-family: 'Inter', sans-serif; font-size: 12px; color: #A79B85;
+  }
+  .deck-stat-pill .deck-stat-num { font-weight: 700; font-size: 14px; }
+  .deck-stat-pill .deck-stat-label { text-transform: lowercase; }
+  .deck-stat-new .deck-stat-num { color: #C9A227; }
+  .deck-stat-learning .deck-stat-num { color: #6FA9A3; }
+  .deck-stat-review .deck-stat-num { color: #7FA37A; }
+
   .break-countdown {
     font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #E8CF7A;
   }
@@ -660,10 +672,22 @@
         <div class="segmented" id="displayNotesSeg"></div>
       </div>
 
+      <!-- New control group: require exact notes vs. allow extra notes -->
+      <div class="control-group">
+        <span class="control-label info-label">Require exact notes<span class="info-dot">?</span><span class="info-tooltip">When on, any extra notes besides the expected chord make the attempt fail. When off, extra notes are allowed as long as all required notes are present.</span></span>
+        <div class="segmented" id="exactNotesSeg"></div>
+      </div>
+
       <!-- New control group: briefly reveal notes on a completed round, independent of Chord Notes -->
       <div class="control-group">
         <span class="control-label info-label">Reveal on Finish<span class="info-dot">?</span><span class="info-tooltip">Even with Chord Notes hidden, shows the notes the moment you complete a round — confirms what you just played without giving anything away beforehand.</span></span>
         <div class="segmented" id="revealOnFinishSeg"></div>
+      </div>
+
+      <!-- New control group: visual confetti burst for good first-chord times -->
+      <div class="control-group">
+        <span class="control-label info-label">Celebrate Good<span class="info-dot">?</span><span class="info-tooltip">Brief confetti burst when your first chord is faster than your 'good' threshold.</span></span>
+        <div class="segmented" id="celebrateGoodSeg"></div>
       </div>
 
       <!-- New control group for shuffling to a random chord -->
@@ -732,6 +756,7 @@
 
     <div class="grade-badge-row">
       <div class="grade-pill" id="gradeStatusBadge" style="display:none;"></div>
+      <div class="deck-stats-row" id="deckStatsRow"></div>
     </div>
 
     <div class="card">
@@ -825,6 +850,10 @@
       <div class="control-group">
         <span class="control-label info-label">Flash on Miss<span class="info-dot">?</span><span class="info-tooltip">When a note-on doesn't match the note you're supposed to play next, briefly flashes the target red. The miss is always logged either way — this only controls the visual feedback.</span></span>
         <div class="segmented" id="arpFlashSeg"></div>
+      </div>
+      <div class="control-group">
+        <span class="control-label info-label">Show LH notes<span class="info-dot">?</span><span class="info-tooltip">When off, only the chord symbol is shown; you have to remember the LH voicing yourself.</span></span>
+        <div class="segmented" id="arpShowLhSeg"></div>
       </div>
       <div class="control-group">
         <span class="control-label info-label">Sequence<span class="info-dot">?</span><span class="info-tooltip">Which of the 12 minor-11th arpeggios are included and in what order. Uncheck any you don't want to practice yet, and use the arrows to reorder the ones you've included.</span></span>
@@ -1132,9 +1161,11 @@
 
     ankiFollow: false,
     lastCardId: null,
+    expectingNextCard: false,
     detectedChord: null,
     ankiSyncStatus: "Follow off",
-    deckStatsText: "",
+    deckStats: { new: null, learn: null, review: null, total: null },
+    currentDeckName: null,
     ankiDefaultsApplied: false,
 
     autoTimer: false,
@@ -1157,6 +1188,8 @@
 
     startCountdownEnabled: false, // run the countdown before a manually-clicked Start too
     revealNotesOnFinish: false,   // briefly show chord notes on round completion, regardless of the main Chord Notes setting
+    celebrateGood: true,          // confetti burst when first-chord time is under the "good" threshold
+    requireExactNotes: true,      // when false, extra notes are allowed as long as all target notes are present
   };
 
   const heldSet = new Set();
@@ -1245,6 +1278,12 @@
           if (typeof parsed.breakTickSound === "boolean") {
             state.breakTickSound = parsed.breakTickSound;
           }
+          if (typeof parsed.celebrateGood === "boolean") {
+            state.celebrateGood = parsed.celebrateGood;
+          }
+          if (typeof parsed.requireExactNotes === "boolean") {
+            state.requireExactNotes = parsed.requireExactNotes;
+          }
         }
       }
     } catch (e) { /* fresh */ }
@@ -1256,6 +1295,8 @@
         breakSeconds: state.breakSeconds,
         countdownSeconds: state.countdownSeconds,
         breakTickSound: state.breakTickSound,
+        celebrateGood: state.celebrateGood,
+        requireExactNotes: state.requireExactNotes,
       }));
     } catch (e) { /* ignore */ }
   }
@@ -1302,6 +1343,65 @@
       osc.start(now);
       osc.stop(now + 0.14);
     } catch (e) { /* audio not available */ }
+  }
+
+  function triggerConfetti() {
+    let canvas = document.getElementById("confettiCanvas");
+    if (!canvas) {
+      canvas = document.createElement("canvas");
+      canvas.id = "confettiCanvas";
+      canvas.style.position = "fixed";
+      canvas.style.inset = "0";
+      canvas.style.width = "100vw";
+      canvas.style.height = "100vh";
+      canvas.style.pointerEvents = "none";
+      canvas.style.zIndex = "9999";
+      document.body.appendChild(canvas);
+    }
+    canvas.style.display = "block";
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext("2d");
+    const colors = ["#C9A227", "#7FA37A", "#E8CF7A", "#6FA9A3"];
+    const particles = [];
+    const count = 50;
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        vx: (Math.random() - 0.5) * 12,
+        vy: (Math.random() - 1) * 12 - 2,
+        w: Math.random() * 6 + 4,
+        h: Math.random() * 6 + 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.25,
+      });
+    }
+    let start = null;
+    function step(ts) {
+      if (!start) start = ts;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.3;
+        p.rot += p.rotSpeed;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      });
+      if (ts - start < 1200) {
+        requestAnimationFrame(step);
+      } else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.style.display = "none";
+      }
+    }
+    requestAnimationFrame(step);
   }
 
   // ---------- Anki Connect Integration ----------
@@ -1474,6 +1574,11 @@
   // deckName comes for free from the same guiCurrentCard call that already
   // drives Anki Sync, so this is a second small request, not a new poll loop.
   async function fetchDeckStats(deckName) {
+    if (!deckName) {
+      state.deckStats = { new: null, learn: null, review: null, total: null };
+      renderDeckStats();
+      return;
+    }
     try {
       const res = await fetch("http://127.0.0.1:8765", {
         method: "POST",
@@ -1481,14 +1586,29 @@
         body: JSON.stringify({ action: "getDeckStats", version: 6, params: { decks: [deckName] } })
       });
       const data = await res.json();
-      if (data.error || !data.result) return;
+      if (data.error || !data.result) {
+        state.deckStats = { new: null, learn: null, review: null, total: null };
+        renderDeckStats();
+        return;
+      }
       const entry = Object.values(data.result)[0];
-      if (!entry) return;
-      state.deckStatsText = `${entry.new_count} new · ${entry.learn_count} learning · ${entry.review_count} due`;
-      renderAnkiSync();
+      if (!entry) {
+        state.deckStats = { new: null, learn: null, review: null, total: null };
+        renderDeckStats();
+        return;
+      }
+      state.deckStats = {
+        new: entry.new_count,
+        learn: entry.learn_count,
+        review: entry.review_count,
+        total: entry.total_in_deck,
+      };
+      renderDeckStats();
     } catch (e) {
       // Silent -- deck stats are a nice-to-have, not worth surfacing a
       // separate error state for on top of the main Anki Sync status.
+      state.deckStats = { new: null, learn: null, review: null, total: null };
+      renderDeckStats();
     }
   }
 
@@ -1521,21 +1641,42 @@
       if (data.error) {
         state.ankiSyncStatus = `Anki: ${data.error}`;
         state.lastCardId = null;
+        state.expectingNextCard = false;
         renderAnkiSync();
         return;
       }
 
       const cardId = data.result && data.result.cardId;
-      if (!cardId || cardId === state.lastCardId) {
-        // No change; refresh status text only.
+      if (!cardId) {
+        if (state.expectingNextCard) {
+          state.ankiSyncStatus = "Deck finished — no more cards";
+          state.expectingNextCard = false;
+        } else {
+          state.ankiSyncStatus = "Not currently reviewing a card";
+        }
+        state.lastCardId = null;
         renderAnkiSync();
         return;
       }
 
+      if (state.expectingNextCard && cardId === state.lastCardId) {
+        state.ankiSyncStatus = "Waiting for next Anki card…";
+        const ds = state.deckStats;
+        if (ds && ds.new != null && ds.new + ds.learn + ds.review === 0) {
+          state.ankiSyncStatus = "Deck finished — no more cards";
+          state.expectingNextCard = false;
+        }
+        renderAnkiSync();
+        return;
+      }
+
+      // New/different card arrived.
+      state.expectingNextCard = false;
       state.lastCardId = cardId;
       const question = data.result.question || "";
       const parsed = parseChordFromText(question);
       const deckName = data.result.deckName || null;
+      state.currentDeckName = deckName;
 
       if (parsed) {
         applyAnkiChord(parsed);
@@ -1565,16 +1706,24 @@
       ankiPollId = null;
     }
     state.lastCardId = null;
+    state.expectingNextCard = false;
     state.detectedChord = null;
     state.ankiSyncStatus = "Follow off";
-    state.deckStatsText = "";
+    state.deckStats = { new: null, learn: null, review: null, total: null };
+    state.currentDeckName = null;
   }
 
   function setAnkiFollow(enabled) {
     state.ankiFollow = enabled;
-    if (enabled) { state.ankiDefaultsApplied = false; startAnkiPolling(); }
-    else stopAnkiPolling();
+    if (enabled) {
+      state.ankiDefaultsApplied = false;
+      startAnkiPolling();
+      if (state.currentDeckName) fetchDeckStats(state.currentDeckName);
+    } else {
+      stopAnkiPolling();
+    }
     renderAnkiSync();
+    renderDeckStats();
   }
 
   // ---------- Derived getters ----------
@@ -1649,7 +1798,11 @@
     }
 
     if (state.phase === "timing" || state.phase === "armed") {
-      if (setsEqual(heldPcs, targetPcSet())) {
+      const target = targetPcSet();
+      const match = state.requireExactNotes
+        ? setsEqual(heldPcs, target)
+        : [...target].every((pc) => heldPcs.has(pc));
+      if (match) {
         const elapsed = readyTime ? performance.now() - readyTime : 0;
         state.phase = "success";
         playChime();
@@ -1779,6 +1932,8 @@
         state.lastGradeResult = { grade: result.label, ms: times[0] };
         state.gradeStatus = "sent";
         updateFirstChordLogGrade(state.pendingLogId, result.ease, result.label);
+        state.expectingNextCard = true;
+        if (state.currentDeckName) fetchDeckStats(state.currentDeckName);
       } else {
         state.gradeStatus = "idle";
       }
@@ -1798,6 +1953,9 @@
     };
     saveHistory();
     state.pendingLogId = appendFirstChordLogEntry(key(), ms, state.roundIsRedo);
+    if (state.celebrateGood && ms < state.gradeThresholds.good) {
+      triggerConfetti();
+    }
   }
 
   function startDrill() {
@@ -1835,6 +1993,7 @@
     if (state.mode === "family") state.qualityIdx = (state.qualityIdx + 1) % FAMILY.length;
     else if (state.mode === "extended") state.qualityIdx = (state.qualityIdx + 1) % EXTENDED.length;
     else state.qualityIdx = (state.qualityIdx + 1) % SINGLE_QUALITIES.length;
+    if (state.ankiFollow) state.expectingNextCard = true;
     render();
   }
 
@@ -1868,10 +2027,13 @@
     repSeg: document.getElementById("repSeg"),
     displayNotesSeg: document.getElementById("displayNotesSeg"), // <-- Added element reference
     revealOnFinishSeg: document.getElementById("revealOnFinishSeg"),
+    celebrateGoodSeg: document.getElementById("celebrateGoodSeg"),
+    exactNotesSeg: document.getElementById("exactNotesSeg"),
     shuffleSeg: document.getElementById("shuffleSeg"),
     ankiSyncSeg: document.getElementById("ankiSyncSeg"),
     ankiSyncStatus: document.getElementById("ankiSyncStatus"),
     ankiDeckStats: document.getElementById("ankiDeckStats"),
+    deckStatsRow: document.getElementById("deckStatsRow"),
     autoTimerSeg: document.getElementById("autoTimerSeg"),
     startCountdownSeg: document.getElementById("startCountdownSeg"),
     autoTimerGroup: document.getElementById("autoTimerGroup"),
@@ -2078,6 +2240,28 @@
     });
   }
 
+  function renderCelebrateGoodSeg() {
+    el.celebrateGoodSeg.innerHTML = "";
+    [{ value: false, label: "Off" }, { value: true, label: "On" }].forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.className = "seg seg-btn" + (state.celebrateGood === opt.value ? " seg-btn-active" : "");
+      btn.textContent = opt.label;
+      btn.onclick = () => { state.celebrateGood = opt.value; saveSettings(); render(); };
+      el.celebrateGoodSeg.appendChild(btn);
+    });
+  }
+
+  function renderExactNotesSeg() {
+    el.exactNotesSeg.innerHTML = "";
+    [{ value: true, label: "On" }, { value: false, label: "Off" }].forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.className = "seg seg-btn" + (state.requireExactNotes === opt.value ? " seg-btn-active" : "");
+      btn.textContent = opt.label;
+      btn.onclick = () => { state.requireExactNotes = opt.value; saveSettings(); render(); };
+      el.exactNotesSeg.appendChild(btn);
+    });
+  }
+
   // ---------- New render function for shuffle / random chord ----------
   function renderShuffleBtn() {
     el.shuffleSeg.innerHTML = "";
@@ -2116,8 +2300,6 @@
       (state.ankiFollow && state.detectedChord ? " anki-sync-status-active" : "") +
       (state.ankiFollow && !state.detectedChord && state.ankiSyncStatus.includes("not reachable")
         ? " anki-sync-status-error" : "");
-
-    el.ankiDeckStats.textContent = state.ankiFollow ? state.deckStatsText : "";
   }
 
   function renderAutoTimerSeg() {
@@ -2196,6 +2378,23 @@
       el.gradeStatusBadge.className = "grade-pill grade-pill-none";
       el.gradeStatusBadge.textContent = "No grade sent yet";
     }
+  }
+
+  function renderDeckStats() {
+    if (!el.deckStatsRow) return;
+    el.deckStatsRow.title = "New / learning / due counts for the deck the current Anki card belongs to.";
+    if (!state.ankiFollow || state.deckStats.new == null) {
+      el.deckStatsRow.innerHTML = "";
+      return;
+    }
+    const parts = [
+      { label: "new", value: state.deckStats.new, cls: "deck-stat-new" },
+      { label: "learning", value: state.deckStats.learn, cls: "deck-stat-learning" },
+      { label: "review", value: state.deckStats.review, cls: "deck-stat-review" },
+    ];
+    el.deckStatsRow.innerHTML = parts.map((p) =>
+      `<div class="deck-stat-pill ${p.cls}"><span class="deck-stat-num">${p.value}</span><span class="deck-stat-label">${p.label}</span></div>`
+    ).join("");
   }
 
   function renderAutoGradeSeg() {
@@ -2352,6 +2551,8 @@
     renderRepSeg();
     renderDisplayNotesSeg(); // <-- Call the new render function
     renderRevealOnFinishSeg();
+    renderCelebrateGoodSeg();
+    renderExactNotesSeg();
     renderShuffleBtn();
     renderAnkiSync();
     renderAutoTimerSeg();
@@ -2359,6 +2560,7 @@
     renderBreakTimerGroup();
     renderAutoGradeSeg();
     renderGradeStatusBadge();
+    renderDeckStats();
     renderFamilyStrip();
     renderChordCard();
     renderPhase();
@@ -2683,6 +2885,7 @@
     // ---------- Persistence ----------
     const SEQ_KEY = "blocked-drill-arpeggio-sequence";
     const FLASH_KEY = "blocked-drill-arpeggio-flash";
+    const SHOW_LH_KEY = "blocked-drill-arpeggio-show-lh";
     const LOG_KEY = "blocked-drill-arpeggio-log";
     const MISS_LOG_KEY = "blocked-drill-arpeggio-miss-log";
     const LOG_MAX = 5000;
@@ -2709,6 +2912,13 @@
     function saveFlashPref() {
       try { localStorage.setItem(FLASH_KEY, flashOnMiss ? "1" : "0"); } catch (e) { /* ignore */ }
     }
+    function loadShowLhPref() {
+      try { const raw = localStorage.getItem(SHOW_LH_KEY); return raw === null ? true : raw === "1"; }
+      catch (e) { return true; }
+    }
+    function saveShowLhPref() {
+      try { localStorage.setItem(SHOW_LH_KEY, arpShowLh ? "1" : "0"); } catch (e) { /* ignore */ }
+    }
     function loadLog(key) {
       try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : []; }
       catch (e) { return []; }
@@ -2733,6 +2943,7 @@
     // ---------- Live drill state ----------
     let seqConfig = loadSeqConfig();
     let flashOnMiss = loadFlashPref();
+    let arpShowLh = loadShowLhPref();
     let chordIdx = 0;
     let phase = "idle"; // idle | awaiting-root | sequence
     let targetIdx = 0;
@@ -2868,15 +3079,15 @@
 
       progressEl.textContent = "chord " + ((chordIdx % seq.length) + 1) + " of " + seq.length;
       nameEl.textContent = chord.id;
-      lhEl.textContent = "LH pedal (hold): " + chord.lh.map((n) => n.name).join(" + ");
+      lhEl.textContent = arpShowLh ? "LH pedal (hold): " + chord.lh.map((n) => n.name).join(" + ") : "";
 
       if (phase === "sequence") {
         const target = chord.rh[targetIdx];
         labelEl.textContent = "next (" + target.deg + ")";
         noteEl.textContent = target.name;
       } else {
-        labelEl.textContent = "play the root + 5th to begin";
-        noteEl.textContent = chord.lh.map((n) => n.name).join(" + ");
+        labelEl.textContent = arpShowLh ? "play the root + 5th to begin" : "play the LH pedal";
+        noteEl.textContent = arpShowLh ? chord.lh.map((n) => n.name).join(" + ") : "LH pedal";
       }
 
       stripEl.innerHTML = chord.rh.map((n, i) => {
@@ -2964,6 +3175,18 @@
       });
     }
 
+    function renderArpShowLhSeg() {
+      const seg = document.getElementById("arpShowLhSeg");
+      seg.innerHTML = "";
+      [{ value: true, label: "On" }, { value: false, label: "Off" }].forEach((opt) => {
+        const btn = document.createElement("button");
+        btn.className = "seg-btn" + (arpShowLh === opt.value ? " seg-btn-active" : "");
+        btn.textContent = opt.label;
+        btn.onclick = () => { arpShowLh = opt.value; saveShowLhPref(); renderArpShowLhSeg(); renderArpTab(); };
+        seg.appendChild(btn);
+      });
+    }
+
     // ---------- Event bindings ----------
     document.getElementById("arpCustomizeBtn").addEventListener("click", () => {
       customizeOpen = !customizeOpen;
@@ -3000,6 +3223,7 @@
     };
 
     renderArpFlashSeg();
+    renderArpShowLhSeg();
     renderArpTab();
 
     // ---------- Tracking: Arpeggios sub-tab ----------
@@ -3648,5 +3872,6 @@
     renderRC();
   })();
   </script>
+  <canvas id="confettiCanvas" style="display:none;position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:9999;"></canvas>
 </body>
 </html>

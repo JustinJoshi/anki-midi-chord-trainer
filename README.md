@@ -40,12 +40,14 @@ Best for **speed and muscle-memory drilling** on a single chord or chord family.
   - **Family Cycle** — cycle through maj7 → 7 → m7 → m7b5 → dim7
   - **Extended Family** — include 9ths, 11ths, and 13ths
 - Toggle **Show/Hide** chord notes if you want to test recognition vs. muscle memory.
+- **Require exact notes** — when on, any extra notes besides the expected chord make the attempt fail; when off, extra notes are allowed as long as all required notes are present.
 - **Reveal on Finish** — even with chord notes hidden, briefly show them the moment you complete a round to confirm what you played without giving the answer away beforehand.
 - **Countdown on Start** — when on, clicking **Start** runs the same countdown used by Automatic Timer before the timer begins.
 - **Hover tooltips** — every control label has a `?` tooltip explaining what it does, so the UI is self-documenting.
 - **Anki Sync** — turn on "Follow card" and the app polls AnkiConnect for the current review card. When the card changes, the app parses the chord on the front (e.g. `Gm7`, `Cmaj7`, `F#m9(maj7)`) and automatically selects it for you.
   - On the **first successful connection** each session, the app applies recommended hands-free defaults: Automatic Timer On, countdown 3 s, Hide Until Go On, Break Before Grading 5 s (tick muted), and Auto-Grade On. This only happens once per Follow toggle, so it won't overwrite settings you change by hand.
-  - Shows a small deck-stats line (new / learning / due counts) for the deck the current card belongs to, refreshed on the same poll cycle.
+  - Shows a row of colored deck-stat pills (new / learning / due counts) directly below the grade-status badge for the deck the current card belongs to. Stats refresh when Follow card is turned on, on every new card, and after a successful auto-grade.
+  - **Last-card countdown fix** — after grading the final card, the app no longer gets stuck on the same `cardId`; it waits for the next Anki card and reports "Deck finished" when no more cards remain.
 - **Automatic Timer** — when Anki Sync is following a card, a new card automatically triggers a countdown and starts the drill hands-free.
   - The countdown length is editable (default 3 s) and persists across sessions.
   - **Hide until go** masks the big chord symbol and the Anki Sync status line during the countdown, then reveals them the instant the timer starts.
@@ -58,6 +60,7 @@ Best for **speed and muscle-memory drilling** on a single chord or chord family.
   - **Hard** if under the "hard" threshold (default 4.0 s)
   - **Again** otherwise
   - A persistent grade status badge above the chord card shows **No grade sent yet** → **Sending to Anki…** → **Last sent: Good (1.42 s)** and stays on screen until the next grade actually replaces it.
+  - **Celebrate Good** toggle (persisted) fires a brief confetti burst when your first-chord time is faster than your "good" threshold.
   - Thresholds, break seconds, countdown seconds, and the break-countdown tick-sound preference all persist across sessions. The Auto-Grade, Automatic Timer, Hide-until-go, and Anki Sync toggles themselves reset to off on reload so nothing auto-grades or auto-hides silently.
 - **Arpeggios tab** — practice 7-note minor-11 arpeggio cells with a two-phase drill:
   - Twelve built-in chords (e.g. `Bbm11`, `Fm11`, `Gm11`) in a default order; customize which chords are included and reorder them with up/down arrows.
@@ -65,6 +68,7 @@ Best for **speed and muscle-memory drilling** on a single chord or chord family.
   - **Sequence phase:** play each note of the right-hand cell in order. The cell loops indefinitely until you hit **Next chord**.
   - Live display shows the next target note/degree, a 7-chip position strip, lap count, miss count, and a scrolling transition-time history.
   - Shares the same MIDI connection as the Chord Drill tab — connect MIDI once and it works for both.
+  - **Show LH notes** toggle (persisted): when off, only the chord symbol is shown and you have to remember the left-hand pedal voicing yourself.
   - **Flash on Miss** toggle (persisted): a wrong note during the sequence briefly flashes the target display red and is logged for review.
 - **Root Cycling tab** — drill one fixed idea across random roots, so you're testing "can I find this anywhere" instead of "do I know this shape in order":
   - **Chord mode** — pick a quality (e.g. `m7`) and play it as a block chord in a random key each rep.
