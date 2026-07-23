@@ -1160,6 +1160,7 @@
     history: {},
 
     ankiFollow: false,
+    lastCardId: null,
     detectedChord: null,
     ankiSyncStatus: "Follow off",
     deckStats: { new: null, learn: null, review: null, total: null },
@@ -1638,17 +1639,19 @@
 
       if (data.error) {
         state.ankiSyncStatus = `Anki: ${data.error}`;
+        state.lastCardId = null;
         renderAnkiSync();
         return;
       }
 
       const cardId = data.result && data.result.cardId;
-      if (!cardId) {
-        state.ankiSyncStatus = "Not currently reviewing a card";
+      if (!cardId || cardId === state.lastCardId) {
+        // No change; refresh status text only.
         renderAnkiSync();
         return;
       }
 
+      state.lastCardId = cardId;
       const question = data.result.question || "";
       const parsed = parseChordFromText(question);
       const deckName = data.result.deckName || null;
@@ -1665,6 +1668,7 @@
       if (deckName) fetchDeckStats(deckName);
     } catch (e) {
       state.ankiSyncStatus = "Anki not reachable";
+      state.lastCardId = null;
       renderAnkiSync();
     }
   }
@@ -1680,6 +1684,7 @@
       clearInterval(ankiPollId);
       ankiPollId = null;
     }
+    state.lastCardId = null;
     state.detectedChord = null;
     state.ankiSyncStatus = "Follow off";
     state.deckStats = { new: null, learn: null, review: null, total: null };
@@ -1896,7 +1901,7 @@
     // Auto-grade: only fires when the drill is actually locked to a specific
     // Anki card (Anki Sync on, a card was detected) so we never rate an
     // unrelated card that happens to be open in Anki's reviewer.
-    if (flipped && state.autoGrade && state.ankiFollow && state.detectedChord) {
+    if (flipped && state.autoGrade && state.ankiFollow && state.lastCardId) {
       state.gradeStatus = "pending";
       render();
       const result = gradeForTime(times[0]);
