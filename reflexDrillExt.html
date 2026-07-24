@@ -681,6 +681,12 @@
         <div class="segmented" id="displayNotesSeg"></div>
       </div>
 
+      <!-- New control group: auto-reveal notes for Anki cards marked as new -->
+      <div class="control-group" id="showNewNotesGroup">
+        <span class="control-label info-label">Show new notes<span class="info-dot">?</span><span class="info-tooltip">When Chord Notes is hidden, automatically reveal the notes for any card Anki labels as 'new', so you can learn the voicing the first time you see it. Learning/review cards stay hidden.</span></span>
+        <div class="segmented" id="showNewNotesSeg"></div>
+      </div>
+
       <!-- New control group: require exact notes vs. allow extra notes -->
       <div class="control-group">
         <span class="control-label info-label">Require exact notes<span class="info-dot">?</span><span class="info-tooltip">When on, any extra notes besides the expected chord make the attempt fail. When off, extra notes are allowed as long as all required notes are present.</span></span>
@@ -1229,6 +1235,7 @@
     ankiSyncStatus: "Follow off",
     deckStats: { new: null, learn: null, review: null, total: null },
     currentDeckName: null,
+    currentCardQueue: null, // 'new' | 'learning' | 'review' | null from cardsInfo
     ankiDefaultsApplied: false,
 
     autoTimer: false,
@@ -1253,6 +1260,7 @@
     revealNotesOnFinish: false,   // briefly show chord notes on round completion, regardless of the main Chord Notes setting
     celebrateGood: true,          // confetti burst when first-chord time is under the "good" threshold
     requireExactNotes: true,      // when false, extra notes are allowed as long as all target notes are present
+    showNewNotes: false,          // when Chord Notes is hidden, reveal notes for Anki cards marked as new
   };
 
   const heldSet = new Set();
@@ -1347,6 +1355,9 @@
           if (typeof parsed.requireExactNotes === "boolean") {
             state.requireExactNotes = parsed.requireExactNotes;
           }
+          if (typeof parsed.showNewNotes === "boolean") {
+            state.showNewNotes = parsed.showNewNotes;
+          }
         }
       }
     } catch (e) { /* fresh */ }
@@ -1360,6 +1371,7 @@
         breakTickSound: state.breakTickSound,
         celebrateGood: state.celebrateGood,
         requireExactNotes: state.requireExactNotes,
+        showNewNotes: state.showNewNotes,
       }));
     } catch (e) { /* ignore */ }
   }
@@ -1675,6 +1687,34 @@
     }
   }
 
+  // Queries AnkiConnect's cardsInfo for the current card's queue/type.
+  // guiCurrentCard does not expose whether a card is new/learning/review,
+  // but cardsInfo returns `type` and `queue` fields that do:
+  //   0 = new, 1 = learning, 2 = review, 3 = relearning/day learning
+  async function fetchCardInfo(cardId) {
+    try {
+      const res = await fetch("http://127.0.0.1:8765", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cardsInfo", version: 6, params: { cards: [cardId] } })
+      });
+      const data = await res.json();
+      if (data.error || !Array.isArray(data.result) || !data.result[0]) {
+        state.currentCardQueue = null;
+      } else {
+        const info = data.result[0];
+        const type = Number(info.type);
+        const queue = Number(info.queue);
+        if (type === 0 || queue === 0) state.currentCardQueue = "new";
+        else if (type === 1 || type === 3 || queue === 1 || queue === 3) state.currentCardQueue = "learning";
+        else if (type === 2 || queue === 2) state.currentCardQueue = "review";
+        else state.currentCardQueue = null;
+      }
+    } catch (e) {
+      state.currentCardQueue = null;
+    }
+  }
+
   async function pollAnkiCard() {
     if (!state.ankiFollow) return;
 
@@ -1704,6 +1744,7 @@
       if (data.error) {
         state.ankiSyncStatus = `Anki: ${data.error}`;
         state.lastCardId = null;
+        state.currentCardQueue = null;
         renderAnkiSync();
         return;
       }
@@ -1721,6 +1762,12 @@
       const deckName = data.result.deckName || null;
       state.currentDeckName = deckName;
 
+      // Fetch the card's queue/type in parallel with applying the chord.
+      fetchCardInfo(cardId).then(() => {
+        renderChordCard();
+        renderAnkiSync();
+      });
+
       if (parsed) {
         applyAnkiChord(parsed);
       } else {
@@ -1733,6 +1780,7 @@
     } catch (e) {
       state.ankiSyncStatus = "Anki not reachable";
       state.lastCardId = null;
+      state.currentCardQueue = null;
       renderAnkiSync();
     }
   }
@@ -1753,6 +1801,7 @@
     state.ankiSyncStatus = "Follow off";
     state.deckStats = { new: null, learn: null, review: null, total: null };
     state.currentDeckName = null;
+    state.currentCardQueue = null;
   }
 
   function setAnkiFollow(enabled) {
@@ -2066,6 +2115,8 @@
     qualitySeg: document.getElementById("qualitySeg"),
     repSeg: document.getElementById("repSeg"),
     displayNotesSeg: document.getElementById("displayNotesSeg"), // <-- Added element reference
+    showNewNotesSeg: document.getElementById("showNewNotesSeg"),
+    showNewNotesGroup: document.getElementById("showNewNotesGroup"),
     revealOnFinishSeg: document.getElementById("revealOnFinishSeg"),
     celebrateGoodSeg: document.getElementById("celebrateGoodSeg"),
     exactNotesSeg: document.getElementById("exactNotesSeg"),
@@ -2267,6 +2318,23 @@
       btn.onclick = () => { state.showNotes = opt.value; render(); };
       el.displayNotesSeg.appendChild(btn);
     });
+  }
+
+  function renderShowNewNotesSeg() {
+    el.showNewNotesSeg.innerHTML = "";
+    const options = [
+      { value: false, label: "Off" },
+      { value: true, label: "On" }
+    ];
+    options.forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.className = "seg seg-btn" + (state.showNewNotes === opt.value ? " seg-btn-active" : "");
+      btn.textContent = opt.label;
+      btn.onclick = () => { state.showNewNotes = opt.value; saveSettings(); render(); };
+      el.showNewNotesSeg.appendChild(btn);
+    });
+    // Only meaningful when Anki Sync is following a card and chord notes are hidden.
+    el.showNewNotesGroup.style.opacity = (state.ankiFollow && !state.showNotes) ? "1" : "0.45";
   }
 
   function renderRevealOnFinishSeg() {
@@ -2486,8 +2554,11 @@
     el.chordNotesEl.textContent = masked ? "" : chordNotes().join("  ·  ");
     // Toggle visibility based on state -- also force-reveal on a completed
     // round when "reveal on finish" is on, regardless of the main toggle.
+    // Additionally, when "Show new notes" is on and Anki reports the current
+    // card as new, reveal the notes even if the main Chord Notes toggle is Hide.
     const forceReveal = state.revealNotesOnFinish && state.justCompleted;
-    el.chordNotesEl.style.visibility = (!masked && (state.showNotes || forceReveal)) ? "visible" : "hidden";
+    const newCardReveal = state.showNewNotes && state.currentCardQueue === "new";
+    el.chordNotesEl.style.visibility = (!masked && (state.showNotes || forceReveal || newCardReveal)) ? "visible" : "hidden";
   }
 
   function renderPhase() {
@@ -2590,6 +2661,7 @@
     renderQualitySeg();
     renderRepSeg();
     renderDisplayNotesSeg(); // <-- Call the new render function
+    renderShowNewNotesSeg();
     renderRevealOnFinishSeg();
     renderCelebrateGoodSeg();
     renderExactNotesSeg();
