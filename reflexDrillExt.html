@@ -82,6 +82,10 @@
     display: flex; flex-direction: column; align-items: center; gap: 8px;
     flex: 0 1 auto;
   }
+  /* Stack Chord Notes + Show new notes + New card reps vertically so they read as one related group. */
+  .notes-control-stack {
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
   #rootGroup, #qualityGroup { flex-basis: 100%; }
   .segmented, .root-grid { justify-content: center; }
   .root-grid { width: 100%; }
@@ -675,16 +679,25 @@
         <div class="segmented" id="repSeg"></div>
       </div>
 
-      <!-- New control group for toggling chord notes -->
-      <div class="control-group">
-        <span class="control-label info-label">Chord Notes<span class="info-dot">?</span><span class="info-tooltip">Shows the actual notes of the current chord underneath its symbol — helpful while learning a voicing, worth hiding once you don't need the reminder anymore.</span></span>
-        <div class="segmented" id="displayNotesSeg"></div>
-      </div>
+      <!-- Notes-related controls stacked vertically so they read as one group. -->
+      <div class="notes-control-stack">
+        <!-- New control group for toggling chord notes -->
+        <div class="control-group">
+          <span class="control-label info-label">Chord Notes<span class="info-dot">?</span><span class="info-tooltip">Shows the actual notes of the current chord underneath its symbol — helpful while learning a voicing, worth hiding once you don't need the reminder anymore.</span></span>
+          <div class="segmented" id="displayNotesSeg"></div>
+        </div>
 
-      <!-- New control group: auto-reveal notes for Anki cards marked as new -->
-      <div class="control-group" id="showNewNotesGroup">
-        <span class="control-label info-label">Show new notes<span class="info-dot">?</span><span class="info-tooltip">When Chord Notes is hidden, automatically reveal the notes for any card Anki labels as 'new', so you can learn the voicing the first time you see it. Learning/review cards stay hidden.</span></span>
-        <div class="segmented" id="showNewNotesSeg"></div>
+        <!-- New control group: auto-reveal notes for Anki cards marked as new -->
+        <div class="control-group" id="showNewNotesGroup">
+          <span class="control-label info-label">Show new notes<span class="info-dot">?</span><span class="info-tooltip">When Chord Notes is hidden, automatically reveal the notes for any card Anki labels as 'new', so you can learn the voicing the first time you see it. Learning/review cards stay hidden.</span></span>
+          <div class="segmented" id="showNewNotesSeg"></div>
+        </div>
+
+        <!-- New control group: boost rep count for cards Anki labels as new -->
+        <div class="control-group" id="newCardRepGroup">
+          <span class="control-label info-label">New card reps<span class="info-dot">?</span><span class="info-tooltip">When on, cards Anki labels as 'new' use a higher rep count instead of your normal Reps per round. Learning and review cards keep the normal count.</span></span>
+          <div class="segmented" id="newCardRepSeg"></div>
+        </div>
       </div>
 
       <!-- New control group: require exact notes vs. allow extra notes -->
@@ -1212,6 +1225,7 @@
     root: ROOTS[0],
     qualityIdx: 0,
     repTarget: 12,
+    currentRepTarget: 12, // snapshot of effective rep target for the active round
     showNotes: false, // <-- Added display state
 
     midiSupported: true,
@@ -1261,6 +1275,8 @@
     celebrateGood: true,          // confetti burst when first-chord time is under the "good" threshold
     requireExactNotes: true,      // when false, extra notes are allowed as long as all target notes are present
     showNewNotes: false,          // when Chord Notes is hidden, reveal notes for Anki cards marked as new
+    newCardRepBoost: false,       // when on, Anki 'new' cards use newCardRepTarget instead of repTarget
+    newCardRepTarget: 20,         // rep count to use for Anki 'new' cards when boost is on
   };
 
   const heldSet = new Set();
@@ -1358,6 +1374,12 @@
           if (typeof parsed.showNewNotes === "boolean") {
             state.showNewNotes = parsed.showNewNotes;
           }
+          if (typeof parsed.newCardRepBoost === "boolean") {
+            state.newCardRepBoost = parsed.newCardRepBoost;
+          }
+          if (Number.isFinite(Number(parsed.newCardRepTarget)) && Number(parsed.newCardRepTarget) >= 1) {
+            state.newCardRepTarget = Number(parsed.newCardRepTarget);
+          }
         }
       }
     } catch (e) { /* fresh */ }
@@ -1372,10 +1394,30 @@
         celebrateGood: state.celebrateGood,
         requireExactNotes: state.requireExactNotes,
         showNewNotes: state.showNewNotes,
+        newCardRepBoost: state.newCardRepBoost,
+        newCardRepTarget: state.newCardRepTarget,
       }));
     } catch (e) { /* ignore */ }
   }
   loadSettings();
+
+  // Returns the rep target that should be used for the current/forthcoming round,
+  // taking Anki's card queue into account when the new-card rep boost is enabled.
+  function effectiveRepTarget() {
+    if (state.newCardRepBoost && state.currentCardQueue === "new") {
+      return state.newCardRepTarget;
+    }
+    return state.repTarget;
+  }
+
+  // Updates the snapshot used for the next round, but never mid-round so the
+  // target can't jump underneath the user while they're playing.
+  function refreshCurrentRepTarget() {
+    if (!state.running) {
+      state.currentRepTarget = effectiveRepTarget();
+    }
+  }
+  state.currentRepTarget = effectiveRepTarget();
 
   // ---------- Audio chime ----------
   function ensureAudioCtx() {
@@ -1764,8 +1806,10 @@
 
       // Fetch the card's queue/type in parallel with applying the chord.
       fetchCardInfo(cardId).then(() => {
+        refreshCurrentRepTarget();
         renderChordCard();
         renderAnkiSync();
+        renderReps();
       });
 
       if (parsed) {
@@ -1905,7 +1949,7 @@
           recordFirstPress(elapsed);
         }
 
-        if (state.repCount >= state.repTarget) {
+        if (state.repCount >= state.currentRepTarget) {
           finishRound();
         } else {
           renderPhase();
@@ -2054,6 +2098,7 @@
     state.repTimes = [];
     state.justCompleted = false;
     state.roundIsRedo = false;
+    state.currentRepTarget = effectiveRepTarget();
     
     if (heldSet.size === 0) {
       state.phase = "timing";
@@ -2080,6 +2125,7 @@
     state.justCompleted = false;
     state.repCount = 0;
     state.repTimes = [];
+    state.currentRepTarget = effectiveRepTarget();
     if (state.mode === "family") state.qualityIdx = (state.qualityIdx + 1) % FAMILY.length;
     else if (state.mode === "extended") state.qualityIdx = (state.qualityIdx + 1) % EXTENDED.length;
     else state.qualityIdx = (state.qualityIdx + 1) % SINGLE_QUALITIES.length;
@@ -2092,6 +2138,7 @@
     state.roundIsRedo = true;
     state.repCount = 0;
     state.repTimes = [];
+    state.currentRepTarget = effectiveRepTarget();
     
     // Automatically reset phase based on whether keys are currently held
     if (heldSet.size === 0) {
@@ -2117,6 +2164,8 @@
     displayNotesSeg: document.getElementById("displayNotesSeg"), // <-- Added element reference
     showNewNotesSeg: document.getElementById("showNewNotesSeg"),
     showNewNotesGroup: document.getElementById("showNewNotesGroup"),
+    newCardRepSeg: document.getElementById("newCardRepSeg"),
+    newCardRepGroup: document.getElementById("newCardRepGroup"),
     revealOnFinishSeg: document.getElementById("revealOnFinishSeg"),
     celebrateGoodSeg: document.getElementById("celebrateGoodSeg"),
     exactNotesSeg: document.getElementById("exactNotesSeg"),
@@ -2282,7 +2331,7 @@
       const btn = document.createElement("button");
       btn.className = "seg seg-btn" + (state.repTarget === n ? " seg-btn-active" : "");
       btn.textContent = n;
-      btn.onclick = () => { state.repTarget = n; render(); };
+      btn.onclick = () => { state.repTarget = n; refreshCurrentRepTarget(); render(); };
       el.repSeg.appendChild(btn);
     });
 
@@ -2299,6 +2348,7 @@
       if (Number.isNaN(n) || n < 1) n = 1;
       if (n > 999) n = 999;
       state.repTarget = n;
+      refreshCurrentRepTarget();
       render();
     };
     el.repSeg.appendChild(input);
@@ -2335,6 +2385,49 @@
     });
     // Only meaningful when Anki Sync is following a card and chord notes are hidden.
     el.showNewNotesGroup.style.opacity = (state.ankiFollow && !state.showNotes) ? "1" : "0.45";
+  }
+
+  function renderNewCardRepBoostSeg() {
+    el.newCardRepSeg.innerHTML = "";
+    const options = [
+      { value: false, label: "Off" },
+      { value: true, label: "On" }
+    ];
+    options.forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.className = "seg seg-btn" + (state.newCardRepBoost === opt.value ? " seg-btn-active" : "");
+      btn.textContent = opt.label;
+      btn.onclick = () => {
+        state.newCardRepBoost = opt.value;
+        refreshCurrentRepTarget();
+        saveSettings();
+        render();
+      };
+      el.newCardRepSeg.appendChild(btn);
+    });
+
+    // Editable rep target used when boost is on.
+    const input = document.createElement("input");
+    input.type = "number";
+    input.className = "rep-input";
+    input.min = "1";
+    input.max = "999";
+    input.value = state.newCardRepTarget;
+    input.title = "Reps for Anki new cards";
+    input.style.width = "60px";
+    input.onchange = () => {
+      let n = parseInt(input.value, 10);
+      if (Number.isNaN(n) || n < 1) n = 1;
+      if (n > 999) n = 999;
+      state.newCardRepTarget = n;
+      refreshCurrentRepTarget();
+      saveSettings();
+      render();
+    };
+    el.newCardRepSeg.appendChild(input);
+
+    // Only meaningful when Anki Sync is following a card.
+    el.newCardRepGroup.style.opacity = state.ankiFollow ? "1" : "0.45";
   }
 
   function renderRevealOnFinishSeg() {
@@ -2592,7 +2685,8 @@
   }
 
   function renderReps() {
-    el.repCountLabel.textContent = `${state.repCount} / ${state.repTarget} reps`;
+    const boostActive = state.newCardRepBoost && state.currentCardQueue === "new" && state.currentRepTarget !== state.repTarget;
+    el.repCountLabel.textContent = `${state.repCount} / ${state.currentRepTarget} reps` + (boostActive ? " (new card boost)" : "");
     if (state.repTimes.length > 0) {
       el.firstChordLabel.style.display = "";
       el.firstChordLabel.textContent = `first chord ${(state.repTimes[0] / 1000).toFixed(2)}s`;
@@ -2606,7 +2700,7 @@
     } else {
       el.avgLabel.style.display = "none";
     }
-    const progressPct = Math.min(state.repCount / state.repTarget, 1);
+    const progressPct = Math.min(state.repCount / state.currentRepTarget, 1);
     el.progressFill.style.width = `${progressPct * 100}%`;
   }
 
@@ -2626,7 +2720,8 @@
       const avgSoFar = state.repTimes.reduce((a, b) => a + b, 0) / state.repTimes.length;
       const best = Math.min(...state.repTimes);
       const firstChord = state.repTimes[0];
-      el.completeText.textContent = `${state.repTarget} reps — avg ${(avgSoFar / 1000).toFixed(2)}s, best ${(best / 1000).toFixed(2)}s, first chord ${(firstChord / 1000).toFixed(2)}s`;
+      const boostLabel = (state.newCardRepBoost && state.currentCardQueue === "new") ? " (new card boost)" : "";
+      el.completeText.textContent = `${state.currentRepTarget} reps${boostLabel} — avg ${(avgSoFar / 1000).toFixed(2)}s, best ${(best / 1000).toFixed(2)}s, first chord ${(firstChord / 1000).toFixed(2)}s`;
       el.nextBtnText.textContent = (state.mode === "family" || state.mode === "extended") ? "Next in family" : "Next chord";
     } else {
       el.completeBox.style.display = "none";
@@ -2662,6 +2757,7 @@
     renderRepSeg();
     renderDisplayNotesSeg(); // <-- Call the new render function
     renderShowNewNotesSeg();
+    renderNewCardRepBoostSeg();
     renderRevealOnFinishSeg();
     renderCelebrateGoodSeg();
     renderExactNotesSeg();
