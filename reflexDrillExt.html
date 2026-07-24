@@ -385,6 +385,15 @@
     font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #C1614A;
   }
 
+  /* Hide the chord/sequence readout during an AnkiSync countdown when
+     "hide until go" is on, so the user reads from Anki's card. */
+  #arpCard.arp-countdown-mask .arp-lh-row,
+  #arpCard.arp-countdown-mask .arp-target-note,
+  #arpCard.arp-countdown-mask .arp-cell-strip { visibility: hidden; }
+
+  /* Brief green pulse on the target note when a lap completes cleanly. */
+  .arp-target-note.arp-success { color: #7FA37A; }
+
 
   .welcome-page { max-width: 760px; margin: 0 auto; padding: 64px 24px 80px; }
 
@@ -856,6 +865,54 @@
         <div class="segmented" id="arpShowLhSeg"></div>
       </div>
       <div class="control-group">
+        <span class="control-label info-label">Anki Sync<span class="info-dot">?</span><span class="info-tooltip">Links this drill to whatever card is currently up for review in Anki. Matches any chord by its root and loads the matching minor-11th arpeggio.</span></span>
+        <div class="segmented" id="arpAnkiSyncSeg"></div>
+        <div class="anki-sync-status" id="arpAnkiSyncStatus"></div>
+      </div>
+      <div class="control-group" id="arpAutoTimerGroup">
+        <span class="control-label info-label">Automatic Timer<span class="info-dot">?</span><span class="info-tooltip">Skips the manual Restart chord step. The moment Anki Sync loads a new card, a countdown runs and the drill arms automatically when it hits zero.</span></span>
+        <div class="segmented" id="arpAutoTimerSeg"></div>
+        <div class="threshold-row">
+          <div class="threshold-field">
+            <span class="threshold-field-label info-label">countdown<span class="info-dot">?</span><span class="info-tooltip">How many seconds the countdown counts down from before the drill arms, when Automatic Timer is on.</span></span>
+            <input type="number" class="rep-input" id="arpCountdownSecondsInput" min="1" step="1" style="width:48px;">
+            <span class="threshold-field-label">s</span>
+          </div>
+          <div class="threshold-field">
+            <span class="threshold-field-label info-label">hide until go<span class="info-dot">?</span><span class="info-tooltip">Keeps the chord symbol, LH notes, and sequence chips hidden during the countdown, so you're reading and reacting to Anki's card, not this screen's answer key.</span></span>
+            <div class="segmented" id="arpHideChordSeg"></div>
+          </div>
+        </div>
+      </div>
+      <div class="control-group" id="arpBreakTimerGroup">
+        <span class="control-label info-label">Break Before Grading<span class="info-dot">?</span><span class="info-tooltip">A pause after you finish a lap, before the app reports back to Anki. Gives you a breather between cards.</span></span>
+        <div class="threshold-row">
+          <div class="threshold-field">
+            <input type="number" class="rep-input" id="arpBreakSecondsInput" min="0" step="1" style="width:48px;">
+            <span class="threshold-field-label">s</span>
+          </div>
+          <button class="btn reset-btn" id="arpBreakTickToggle" title="Toggle tick sound" style="padding:8px;">
+            <svg id="arpBreakTickIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="control-group" id="arpAutoGradeGroup">
+        <span class="control-label info-label">Auto-Grade<span class="info-dot">?</span><span class="info-tooltip">Automatically grades the Anki card from how clean the lap was — based on missed notes, not time.</span></span>
+        <div class="segmented" id="arpAutoGradeSeg"></div>
+        <div class="threshold-row" id="arpThresholdRow" style="display:none;">
+          <div class="threshold-field">
+            <span class="threshold-field-label info-label">good ≤<span class="info-dot">?</span><span class="info-tooltip">Maximum number of missed notes for a Good grade. With the defaults, 0 misses sends Good.</span></span>
+            <input type="number" class="rep-input" id="arpGoodMissesInput" min="0" step="1" style="width:56px;">
+            <span class="threshold-field-label">misses</span>
+          </div>
+          <div class="threshold-field">
+            <span class="threshold-field-label info-label">hard ≤<span class="info-dot">?</span><span class="info-tooltip">Maximum number of missed notes for a Hard grade. Anything worse sends Again. With the defaults, 1–2 misses send Hard.</span></span>
+            <input type="number" class="rep-input" id="arpHardMissesInput" min="0" step="1" style="width:56px;">
+            <span class="threshold-field-label">misses</span>
+          </div>
+        </div>
+      </div>
+      <div class="control-group">
         <span class="control-label info-label">Sequence<span class="info-dot">?</span><span class="info-tooltip">Which of the 12 minor-11th arpeggios are included and in what order. Uncheck any you don't want to practice yet, and use the arrows to reorder the ones you've included.</span></span>
         <button class="btn reset-btn" id="arpCustomizeBtn" style="width:auto;padding:8px 16px;border-radius:999px;">Customize chords &amp; order</button>
       </div>
@@ -869,7 +926,12 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="grade-badge-row">
+      <div class="grade-pill" id="arpGradeStatusBadge" style="display:none;"></div>
+      <div class="deck-stats-row" id="arpDeckStatsRow"></div>
+    </div>
+
+    <div class="card" id="arpCard">
       <div class="eyebrow" id="arpChordProgress">chord 1 of 12</div>
       <div class="title" id="arpChordName" style="font-size:32px;">Bbm11</div>
       <div class="arp-lh-row" id="arpLhRow"></div>
@@ -881,8 +943,10 @@
 
       <div class="arp-cell-strip" id="arpCellStrip"></div>
 
+      <div class="break-countdown" id="arpBreakCountdownEl" style="display:none;"></div>
+
       <div class="stats-row">
-        <div class="stat-box">
+        <div class="stat-box" id="arpLiveTimerBox" style="display:none;">
           <div class="stat-value" id="arpLiveTimer">—</div>
           <div class="stat-label">since last note</div>
         </div>
@@ -2895,6 +2959,24 @@
     function saveShowLhPref() {
       try { localStorage.setItem(SHOW_LH_KEY, arpShowLh ? "1" : "0"); } catch (e) { /* ignore */ }
     }
+
+    // ---------- Shared settings with Chord Drill ----------
+    // These numeric preferences are intentionally shared across tabs so the
+    // user only has to set countdown/break lengths (and miss thresholds) once.
+    const SETTINGS_KEY = "blocked-drill-settings";
+    function loadSharedSettings() {
+      try {
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) { return {}; }
+    }
+    function saveSharedSettings(patch) {
+      try {
+        const current = loadSharedSettings();
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...current, ...patch }));
+      } catch (e) { /* ignore */ }
+    }
+
     function loadLog(key) {
       try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : []; }
       catch (e) { return []; }
@@ -2921,15 +3003,59 @@
     let flashOnMiss = loadFlashPref();
     let arpShowLh = loadShowLhPref();
     let chordIdx = 0;
-    let phase = "idle"; // idle | awaiting-root | sequence
+    let phase = "idle"; // idle | countdown | awaiting-root | sequence | complete
     let targetIdx = 0;
     let lastEventTime = null;
     let lapCount = 0;
     let missCount = 0;
+    let missesThisLap = 0;
     let recentHistory = [];
     let arpTabActive = false;
     let liveTimerInterval = null;
     let customizeOpen = false;
+
+    // ---------- Anki Sync state ----------
+    let arpAnkiFollow = false;
+    let arpAutoTimer = false;
+    let arpCountdownSeconds = 3;
+    let arpHideChordUntilGo = false;
+    let arpBreakSeconds = 0;
+    let arpBreakTickSound = true;
+    let arpAutoGrade = false;
+    let arpMissThresholds = { good: 0, hard: 2 };
+    let arpGradeStatus = "idle"; // idle | pending | sent
+    let arpLastGradeResult = null; // { grade, misses }
+    let arpLastCardId = null;
+    let arpDetectedChord = null;
+    let arpAnkiStatusText = "Follow off";
+    let arpDeckStats = { new: null, learn: null, review: null, total: null };
+    let arpCurrentDeckName = null;
+    let arpAnkiDefaultsApplied = false;
+    let arpCountdownValue = 0;
+    let arpBreakRemaining = 0;
+    let arpPendingCard = null; // card detected while tab was inactive
+    let audioCtx = null;
+    let ankiPollId = null;
+    let arpCountdownIntervalId = null;
+    let arpBreakIntervalId = null;
+    let arpBreakCancelResolver = null;
+
+    (function initSharedSettings() {
+      const s = loadSharedSettings();
+      if (Number.isFinite(s.countdownSeconds) && s.countdownSeconds >= 1) {
+        arpCountdownSeconds = Math.round(s.countdownSeconds);
+      }
+      if (Number.isFinite(s.breakSeconds) && s.breakSeconds >= 0) {
+        arpBreakSeconds = Math.round(s.breakSeconds);
+      }
+      if (typeof s.breakTickSound === "boolean") arpBreakTickSound = s.breakTickSound;
+      if (s.arpMissThresholds && Number.isFinite(s.arpMissThresholds.good) && Number.isFinite(s.arpMissThresholds.hard)) {
+        arpMissThresholds = {
+          good: Math.max(0, Math.round(s.arpMissThresholds.good)),
+          hard: Math.max(0, Math.round(s.arpMissThresholds.hard)),
+        };
+      }
+    })();
 
     const heldPcCounts = new Map();
     function noteOnPc(pc) { heldPcCounts.set(pc, (heldPcCounts.get(pc) || 0) + 1); }
@@ -2956,6 +3082,7 @@
       lastEventTime = null;
       lapCount = 0;
       missCount = 0;
+      missesThisLap = 0;
       recentHistory = [];
       sinceArmFirstNote = true;
       renderArpTab();
@@ -2972,7 +3099,9 @@
     }
 
     function handleArpNoteOn(pc) {
-      if (!arpTabActive || phase === "idle") return;
+      if (!arpTabActive) return;
+      // Ignore notes during countdown or after a completed lap.
+      if (phase === "idle" || phase === "countdown" || phase === "complete") return;
       const chord = currentChord();
       if (!chord) return;
 
@@ -2997,10 +3126,14 @@
           lastEventTime = now;
           sinceArmFirstNote = false;
           targetIdx = (targetIdx + 1) % chord.rh.length;
-          if (targetIdx === 0) lapCount += 1;
+          if (targetIdx === 0) {
+            lapCount += 1;
+            finishArpRound();
+          }
           renderArpTab();
         } else {
           missCount += 1;
+          missesThisLap += 1;
           const fromLabel = currentFromLabel(chord);
           const playedName = noteNameForPc(pc);
           logMiss(chord.id, fromLabel, target.deg, playedName);
@@ -3029,6 +3162,371 @@
       setTimeout(() => el.classList.remove("arp-flash"), 260);
     }
 
+    // ---------- Audio feedback ----------
+    function ensureAudioCtx() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      return audioCtx;
+    }
+    function playArpChime() {
+      try {
+        const ctx = ensureAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 1046.5;
+        const now = ctx.currentTime;
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.35, now + 0.001);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.22);
+      } catch (e) { /* ignore */ }
+    }
+    function playArpTick(freq) {
+      try {
+        const ctx = ensureAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        const now = ctx.currentTime;
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.25, now + 0.001);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.14);
+      } catch (e) { /* ignore */ }
+    }
+
+    // ---------- Visual feedback on successful lap ----------
+    function flashArpSuccess() {
+      const el = document.getElementById("arpTargetNote");
+      if (!el) return;
+      el.classList.add("arp-success");
+      setTimeout(() => el.classList.remove("arp-success"), 500);
+    }
+
+    // ---------- AnkiConnect integration ----------
+    const arpAnkiStatusEl = document.getElementById("arpAnkiSyncStatus");
+
+    async function flipAnkiCard() {
+      try {
+        const res = await fetch("http://127.0.0.1:8765", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "guiShowAnswer", version: 6 })
+        });
+        const data = await res.json();
+        if (data.error || data.result === false) {
+          console.error("Anki Error:", data.error);
+          arpAnkiStatusText = data.error ? `Anki: ${data.error}` : "Anki: no card in review mode.";
+          return false;
+        }
+        arpAnkiStatusText = "Anki card flipped successfully!";
+        return true;
+      } catch (e) {
+        console.warn("Could not reach AnkiConnect.", e);
+        arpAnkiStatusText = "Could not reach AnkiConnect. Is Anki running?";
+        return false;
+      }
+    }
+
+    async function gradeAnkiCard(ease) {
+      try {
+        const res = await fetch("http://127.0.0.1:8765", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "guiAnswerCard", version: 6, params: { ease } })
+        });
+        const data = await res.json();
+        if (data.error || data.result === false) {
+          console.error("Anki grading error:", data.error);
+          arpAnkiStatusText = data.error ? `Anki: ${data.error}` : "Anki: could not auto-grade card.";
+          return false;
+        }
+        return true;
+      } catch (e) {
+        console.warn("Could not reach AnkiConnect to grade card.", e);
+        arpAnkiStatusText = "Could not reach AnkiConnect. Is Anki running?";
+        return false;
+      }
+    }
+
+    function gradeForMisses(misses) {
+      if (misses <= arpMissThresholds.good) return { ease: 3, label: "Good" };
+      if (misses <= arpMissThresholds.hard) return { ease: 2, label: "Hard" };
+      return { ease: 1, label: "Again" };
+    }
+
+    async function fetchDeckStats(deckName) {
+      if (!deckName) {
+        arpDeckStats = { new: null, learn: null, review: null, total: null };
+        renderArpDeckStats();
+        return;
+      }
+      try {
+        const res = await fetch("http://127.0.0.1:8765", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "getDeckStats", version: 6, params: { decks: [deckName] } })
+        });
+        const data = await res.json();
+        if (data.error || !data.result) {
+          arpDeckStats = { new: null, learn: null, review: null, total: null };
+          renderArpDeckStats();
+          return;
+        }
+        const entry = Object.values(data.result)[0];
+        if (!entry) {
+          arpDeckStats = { new: null, learn: null, review: null, total: null };
+          renderArpDeckStats();
+          return;
+        }
+        arpDeckStats = {
+          new: entry.new_count,
+          learn: entry.learn_count,
+          review: entry.review_count,
+          total: entry.total_in_deck,
+        };
+        renderArpDeckStats();
+      } catch (e) {
+        arpDeckStats = { new: null, learn: null, review: null, total: null };
+        renderArpDeckStats();
+      }
+    }
+
+    // Extract just the root from the Anki card front. Any quality maps to the
+    // matching-root minor-11th arpeggio in this tab.
+    function parseChordRoot(text) {
+      if (!text) return null;
+      const plain = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const rootTokens = ["C#","Db","D#","Eb","F#","Gb","G#","Ab","A#","Bb","C","D","E","F","G","A","B"];
+      const pattern = new RegExp(`(?<![A-Za-z#b♯♭0-9])(${rootTokens.join("|")})(?![A-Za-z#b♯♭0-9])`, "i");
+      const m = plain.match(pattern);
+      if (!m) return null;
+      const rootMap = {
+        "C": 0, "C#": 1, "DB": 1, "D": 2, "D#": 3, "EB": 3,
+        "E": 4, "F": 5, "F#": 6, "GB": 6, "G": 7, "G#": 8,
+        "AB": 8, "A": 9, "A#": 10, "BB": 10, "B": 11,
+      };
+      const pc = rootMap[m[1].toUpperCase()];
+      return pc === undefined ? null : { pc, rootName: m[1] };
+    }
+
+    function applyAnkiChord(parsed) {
+      const matchIdx = ARPEGGIO_CHORDS.findIndex((c) => c.lh[0].pc === parsed.pc);
+      if (matchIdx === -1) {
+        arpDetectedChord = null;
+        arpAnkiStatusText = "Card found, no matching arpeggio";
+        renderArpAnkiSync();
+        return;
+      }
+      stopArpCountdown();
+      cancelArpBreakCountdown();
+      chordIdx = matchIdx;
+      arpDetectedChord = ARPEGGIO_CHORDS[matchIdx].id;
+      arpAnkiStatusText = `Following: ${arpDetectedChord}`;
+      renderArpTab();
+      if (arpAutoTimer && arpTabActive) startArpCountdown();
+    }
+
+    function startArpCountdown() {
+      stopArpCountdown();
+      phase = "countdown";
+      arpCountdownValue = Math.max(1, Math.round(arpCountdownSeconds || 3));
+      renderArpTab();
+      playArpTick(880);
+      arpCountdownIntervalId = setInterval(() => {
+        arpCountdownValue -= 1;
+        if (arpCountdownValue <= 0) {
+          stopArpCountdown();
+          armChord();
+        } else {
+          playArpTick(880);
+          renderArpTab();
+        }
+      }, 1000);
+    }
+
+    function stopArpCountdown() {
+      if (arpCountdownIntervalId) {
+        clearInterval(arpCountdownIntervalId);
+        arpCountdownIntervalId = null;
+      }
+    }
+
+    function runArpBreakCountdownIfAny() {
+      return new Promise((resolve) => {
+        if (!arpBreakSeconds || arpBreakSeconds <= 0) { resolve(true); return; }
+        arpBreakCancelResolver = resolve;
+        arpBreakRemaining = Math.round(arpBreakSeconds);
+        renderArpTab();
+        if (arpBreakTickSound) playArpTick(660);
+        arpBreakIntervalId = setInterval(() => {
+          arpBreakRemaining -= 1;
+          if (arpBreakRemaining <= 0) {
+            clearInterval(arpBreakIntervalId);
+            arpBreakIntervalId = null;
+            arpBreakRemaining = 0;
+            arpBreakCancelResolver = null;
+            renderArpTab();
+            resolve(true);
+          } else {
+            if (arpBreakTickSound) playArpTick(660);
+            renderArpTab();
+          }
+        }, 1000);
+      });
+    }
+
+    function cancelArpBreakCountdown() {
+      if (arpBreakIntervalId) {
+        clearInterval(arpBreakIntervalId);
+        arpBreakIntervalId = null;
+      }
+      arpBreakRemaining = 0;
+      if (arpBreakCancelResolver) {
+        const resolve = arpBreakCancelResolver;
+        arpBreakCancelResolver = null;
+        resolve(false);
+      }
+    }
+
+    async function finishArpRound() {
+      phase = "complete";
+      playArpChime();
+      flashArpSuccess();
+      renderArpTab();
+
+      const proceeded = await runArpBreakCountdownIfAny();
+      if (!proceeded) return;
+
+      const flipped = await flipAnkiCard();
+      if (flipped && arpAutoGrade && arpAnkiFollow && arpLastCardId) {
+        arpGradeStatus = "pending";
+        renderArpGradeStatusBadge();
+        const result = gradeForMisses(missesThisLap);
+        const graded = await gradeAnkiCard(result.ease);
+        if (graded) {
+          arpLastGradeResult = { grade: result.label, misses: missesThisLap };
+          arpGradeStatus = "sent";
+          if (arpCurrentDeckName) fetchDeckStats(arpCurrentDeckName);
+        } else {
+          arpGradeStatus = "idle";
+        }
+        renderArpGradeStatusBadge();
+      }
+    }
+
+    async function pollAnkiCard() {
+      if (!arpAnkiFollow) return;
+      try {
+        const res = await fetch("http://127.0.0.1:8765", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "guiCurrentCard", version: 6 })
+        });
+        const data = await res.json();
+
+        if (!data.error && !arpAnkiDefaultsApplied) {
+          arpAnkiDefaultsApplied = true;
+          arpAutoTimer = true;
+          arpCountdownSeconds = 3;
+          arpHideChordUntilGo = true;
+          arpBreakSeconds = 5;
+          arpBreakTickSound = false;
+          arpAutoGrade = true;
+          saveSharedSettings({
+            countdownSeconds: arpCountdownSeconds,
+            breakSeconds: arpBreakSeconds,
+            breakTickSound: arpBreakTickSound,
+          });
+        }
+
+        if (data.error) {
+          arpAnkiStatusText = `Anki: ${data.error}`;
+          arpLastCardId = null;
+          renderArpAnkiSync();
+          return;
+        }
+
+        const cardId = data.result && data.result.cardId;
+        if (!cardId || cardId === arpLastCardId) {
+          renderArpAnkiSync();
+          return;
+        }
+
+        arpLastCardId = cardId;
+        const question = data.result.question || "";
+        const parsed = parseChordRoot(question);
+        arpCurrentDeckName = data.result.deckName || null;
+
+        if (arpTabActive) {
+          if (parsed) applyAnkiChord(parsed);
+          else {
+            arpDetectedChord = null;
+            arpAnkiStatusText = "Card found, no chord parsed";
+            renderArpAnkiSync();
+          }
+        } else {
+          arpPendingCard = parsed;
+          arpAnkiStatusText = parsed
+            ? `Next up: ${ARPEGGIO_CHORDS.find((c) => c.lh[0].pc === parsed.pc)?.id || "matching arpeggio"}`
+            : "Card found, no chord parsed";
+          renderArpAnkiSync();
+        }
+
+        if (arpCurrentDeckName) fetchDeckStats(arpCurrentDeckName);
+      } catch (e) {
+        arpAnkiStatusText = "Anki not reachable";
+        arpLastCardId = null;
+        renderArpAnkiSync();
+      }
+    }
+
+    function startAnkiPolling() {
+      if (ankiPollId) return;
+      pollAnkiCard();
+      ankiPollId = setInterval(pollAnkiCard, 800);
+    }
+
+    function stopAnkiPolling() {
+      if (ankiPollId) {
+        clearInterval(ankiPollId);
+        ankiPollId = null;
+      }
+      arpLastCardId = null;
+      arpDetectedChord = null;
+      arpPendingCard = null;
+      arpAnkiStatusText = "Follow off";
+      arpDeckStats = { new: null, learn: null, review: null, total: null };
+      arpCurrentDeckName = null;
+    }
+
+    function setArpAnkiFollow(enabled) {
+      arpAnkiFollow = enabled;
+      if (enabled) {
+        arpAnkiDefaultsApplied = false;
+        startAnkiPolling();
+        if (arpCurrentDeckName) fetchDeckStats(arpCurrentDeckName);
+      } else {
+        stopArpCountdown();
+        cancelArpBreakCountdown();
+        stopAnkiPolling();
+      }
+      renderArpAnkiSync();
+      renderArpAutoTimerSeg();
+      renderArpBreakTimerGroup();
+      renderArpAutoGradeSeg();
+      renderArpDeckStats();
+      renderArpGradeStatusBadge();
+    }
+
     // ---------- Render: drill ----------
     function renderArpTab() {
       const seq = activeSequence();
@@ -3040,6 +3538,8 @@
       const noteEl = document.getElementById("arpTargetNote");
       const stripEl = document.getElementById("arpCellStrip");
       const historyEl = document.getElementById("arpHistory");
+      const breakEl = document.getElementById("arpBreakCountdownEl");
+      const cardEl = document.getElementById("arpCard");
 
       if (!chord) {
         progressEl.textContent = "no chords selected";
@@ -3049,33 +3549,59 @@
         noteEl.textContent = "—";
         stripEl.innerHTML = "";
         historyEl.textContent = "";
+        breakEl.style.display = "none";
+        cardEl.classList.remove("arp-countdown-mask");
         renderArpLiveStats();
         return;
       }
 
-      progressEl.textContent = "chord " + ((chordIdx % seq.length) + 1) + " of " + seq.length;
-      nameEl.textContent = chord.id;
-      lhEl.textContent = arpShowLh ? "LH pedal (hold): " + chord.lh.map((n) => n.name).join(" + ") : "";
+      // Mask chord/sequence during countdown if hide-until-go is on.
+      const masked = arpHideChordUntilGo && phase === "countdown";
+      cardEl.classList.toggle("arp-countdown-mask", masked);
 
-      if (phase === "sequence") {
+      progressEl.textContent = "chord " + ((chordIdx % seq.length) + 1) + " of " + seq.length;
+      nameEl.textContent = masked ? "????" : chord.id;
+      lhEl.textContent = (masked || !arpShowLh) ? "" : "LH pedal (hold): " + chord.lh.map((n) => n.name).join(" + ");
+
+      if (phase === "countdown") {
+        labelEl.textContent = `Get ready — chord in ${arpCountdownValue}…`;
+        noteEl.textContent = String(arpCountdownValue);
+        stripEl.innerHTML = "";
+        historyEl.textContent = "";
+      } else if (phase === "complete") {
+        labelEl.textContent = "\u2713 Lap complete";
+        noteEl.textContent = chord.id;
+        stripEl.innerHTML = chord.rh.map((n) => '<span class="arp-cell-chip arp-cell-done">' + n.deg + " " + n.name + "</span>").join("");
+        historyEl.textContent = recentHistory.length
+          ? recentHistory.map((h) => h.from + "\u2192" + h.to + " " + (h.ms / 1000).toFixed(2) + "s").join("  \u00b7  ")
+          : "";
+      } else if (phase === "sequence") {
         const target = chord.rh[targetIdx];
         labelEl.textContent = "next (" + target.deg + ")";
         noteEl.textContent = target.name;
+        stripEl.innerHTML = chord.rh.map((n, i) => {
+          let cls = "arp-cell-chip";
+          if (i === targetIdx) cls += " arp-cell-current";
+          else if (i < targetIdx) cls += " arp-cell-done";
+          return '<span class="' + cls + '">' + n.deg + " " + n.name + "</span>";
+        }).join("");
+        historyEl.textContent = recentHistory.length
+          ? recentHistory.map((h) => h.from + "\u2192" + h.to + " " + (h.ms / 1000).toFixed(2) + "s").join("  \u00b7  ")
+          : "play the pedal, then the sequence, to see transition times here";
       } else {
+        // awaiting-root or idle
         labelEl.textContent = arpShowLh ? "play the root + 5th to begin" : "play the LH pedal";
         noteEl.textContent = arpShowLh ? chord.lh.map((n) => n.name).join(" + ") : "LH pedal";
+        stripEl.innerHTML = chord.rh.map((n) => '<span class="arp-cell-chip">' + n.deg + " " + n.name + "</span>").join("");
+        historyEl.textContent = "play the pedal, then the sequence, to see transition times here";
       }
 
-      stripEl.innerHTML = chord.rh.map((n, i) => {
-        let cls = "arp-cell-chip";
-        if (phase === "sequence" && i === targetIdx) cls += " arp-cell-current";
-        else if (phase === "sequence" && i < targetIdx) cls += " arp-cell-done";
-        return '<span class="' + cls + '">' + n.deg + " " + n.name + "</span>";
-      }).join("");
-
-      historyEl.textContent = recentHistory.length
-        ? recentHistory.map((h) => h.from + "\u2192" + h.to + " " + (h.ms / 1000).toFixed(2) + "s").join("  \u00b7  ")
-        : "play the pedal, then the sequence, to see transition times here";
+      if (arpBreakRemaining > 0) {
+        breakEl.style.display = "block";
+        breakEl.textContent = `Grading in ${arpBreakRemaining}…`;
+      } else {
+        breakEl.style.display = "none";
+      }
 
       renderArpLiveStats();
     }
@@ -3163,6 +3689,117 @@
       });
     }
 
+    function renderArpAnkiSync() {
+      const seg = document.getElementById("arpAnkiSyncSeg");
+      seg.innerHTML = "";
+      [{ value: false, label: "Off" }, { value: true, label: "Follow card" }].forEach((opt) => {
+        const btn = document.createElement("button");
+        btn.className = "seg-btn" + (arpAnkiFollow === opt.value ? " seg-btn-active" : "");
+        btn.textContent = opt.label;
+        btn.onclick = () => { setArpAnkiFollow(opt.value); };
+        seg.appendChild(btn);
+      });
+
+      const masked = arpHideChordUntilGo && phase === "countdown" && arpAnkiStatusText.startsWith("Following:");
+      arpAnkiStatusEl.textContent = masked ? "Card loaded — hidden until go" : arpAnkiStatusText;
+      arpAnkiStatusEl.className = "anki-sync-status" +
+        (arpAnkiFollow && arpDetectedChord ? " anki-sync-status-active" : "") +
+        (arpAnkiFollow && !arpDetectedChord && arpAnkiStatusText.includes("not reachable")
+          ? " anki-sync-status-error" : "");
+    }
+
+    function renderArpAutoTimerSeg() {
+      const seg = document.getElementById("arpAutoTimerSeg");
+      seg.innerHTML = "";
+      [{ value: false, label: "Off" }, { value: true, label: "On" }].forEach((opt) => {
+        const btn = document.createElement("button");
+        btn.className = "seg-btn" + (arpAutoTimer === opt.value ? " seg-btn-active" : "");
+        btn.textContent = opt.label;
+        btn.onclick = () => { arpAutoTimer = opt.value; renderArpAutoTimerSeg(); };
+        seg.appendChild(btn);
+      });
+      document.getElementById("arpAutoTimerGroup").style.opacity = arpAnkiFollow ? "1" : "0.45";
+
+      const input = document.getElementById("arpCountdownSecondsInput");
+      if (document.activeElement !== input) input.value = arpCountdownSeconds;
+
+      const hideSeg = document.getElementById("arpHideChordSeg");
+      hideSeg.innerHTML = "";
+      [{ value: false, label: "Off" }, { value: true, label: "On" }].forEach((opt) => {
+        const btn = document.createElement("button");
+        btn.className = "seg-btn" + (arpHideChordUntilGo === opt.value ? " seg-btn-active" : "");
+        btn.textContent = opt.label;
+        btn.onclick = () => { arpHideChordUntilGo = opt.value; renderArpAutoTimerSeg(); renderArpTab(); };
+        hideSeg.appendChild(btn);
+      });
+    }
+
+    function renderArpBreakTimerGroup() {
+      const input = document.getElementById("arpBreakSecondsInput");
+      if (document.activeElement !== input) input.value = arpBreakSeconds;
+      const toggle = document.getElementById("arpBreakTickToggle");
+      toggle.className = "btn reset-btn" + (arpBreakTickSound ? " tick-toggle-active" : " tick-toggle-muted");
+      toggle.title = arpBreakTickSound
+        ? "Tick sound on during break countdown (click to mute)"
+        : "Tick sound muted during break countdown (click to enable)";
+    }
+
+    function renderArpAutoGradeSeg() {
+      const seg = document.getElementById("arpAutoGradeSeg");
+      seg.innerHTML = "";
+      [{ value: false, label: "Off" }, { value: true, label: "On" }].forEach((opt) => {
+        const btn = document.createElement("button");
+        btn.className = "seg-btn" + (arpAutoGrade === opt.value ? " seg-btn-active" : "");
+        btn.textContent = opt.label;
+        btn.onclick = () => { arpAutoGrade = opt.value; renderArpAutoGradeSeg(); renderArpGradeStatusBadge(); };
+        seg.appendChild(btn);
+      });
+      document.getElementById("arpAutoGradeGroup").style.opacity = arpAnkiFollow ? "1" : "0.45";
+      document.getElementById("arpThresholdRow").style.display = arpAutoGrade ? "flex" : "none";
+      const goodInput = document.getElementById("arpGoodMissesInput");
+      const hardInput = document.getElementById("arpHardMissesInput");
+      if (document.activeElement !== goodInput) goodInput.value = arpMissThresholds.good;
+      if (document.activeElement !== hardInput) hardInput.value = arpMissThresholds.hard;
+    }
+
+    function renderArpGradeStatusBadge() {
+      const badge = document.getElementById("arpGradeStatusBadge");
+      if (!arpAutoGrade) {
+        badge.style.display = "none";
+        return;
+      }
+      badge.style.display = "inline-flex";
+      if (arpGradeStatus === "pending") {
+        badge.className = "grade-pill grade-pill-pending";
+        badge.textContent = "Sending to Anki…";
+      } else if (arpLastGradeResult) {
+        const g = arpLastGradeResult;
+        badge.className = "grade-pill grade-pill-" + g.grade.toLowerCase();
+        badge.textContent = `Last sent: ${g.grade} (${g.misses} miss${g.misses === 1 ? "" : "es"})`;
+      } else {
+        badge.className = "grade-pill grade-pill-none";
+        badge.textContent = "No grade sent yet";
+      }
+    }
+
+    function renderArpDeckStats() {
+      const row = document.getElementById("arpDeckStatsRow");
+      if (!row) return;
+      row.title = "New / learning / due counts for the deck the current Anki card belongs to.";
+      if (!arpAnkiFollow || arpDeckStats.new == null) {
+        row.innerHTML = "";
+        return;
+      }
+      const parts = [
+        { label: "new", value: arpDeckStats.new, cls: "deck-stat-new" },
+        { label: "learning", value: arpDeckStats.learn, cls: "deck-stat-learning" },
+        { label: "review", value: arpDeckStats.review, cls: "deck-stat-review" },
+      ];
+      row.innerHTML = parts.map((p) =>
+        `<div class="deck-stat-pill ${p.cls}"><span class="deck-stat-num">${p.value}</span><span class="deck-stat-label">${p.label}</span></div>`
+      ).join("");
+    }
+
     // ---------- Event bindings ----------
     document.getElementById("arpCustomizeBtn").addEventListener("click", () => {
       customizeOpen = !customizeOpen;
@@ -3180,18 +3817,67 @@
       renderArpCustomizeList();
       armChord();
     });
-    document.getElementById("arpRestartBtn").addEventListener("click", armChord);
+    document.getElementById("arpRestartBtn").addEventListener("click", () => {
+      stopArpCountdown();
+      cancelArpBreakCountdown();
+      armChord();
+    });
     document.getElementById("arpNextBtn").addEventListener("click", () => {
+      stopArpCountdown();
+      cancelArpBreakCountdown();
       const seq = activeSequence();
       if (!seq.length) return;
       chordIdx = (chordIdx + 1) % seq.length;
       armChord();
     });
 
+    document.getElementById("arpCountdownSecondsInput").onchange = () => {
+      const v = parseFloat(document.getElementById("arpCountdownSecondsInput").value);
+      arpCountdownSeconds = (isFinite(v) && v >= 1) ? Math.round(v) : 3;
+      saveSharedSettings({ countdownSeconds: arpCountdownSeconds });
+      renderArpAutoTimerSeg();
+    };
+    document.getElementById("arpBreakSecondsInput").onchange = () => {
+      const v = parseFloat(document.getElementById("arpBreakSecondsInput").value);
+      arpBreakSeconds = (isFinite(v) && v >= 0) ? Math.round(v) : 0;
+      saveSharedSettings({ breakSeconds: arpBreakSeconds });
+      renderArpBreakTimerGroup();
+    };
+    document.getElementById("arpBreakTickToggle").onclick = () => {
+      arpBreakTickSound = !arpBreakTickSound;
+      saveSharedSettings({ breakTickSound: arpBreakTickSound });
+      renderArpBreakTimerGroup();
+    };
+
+    function commitArpMissThreshold(field, inputEl) {
+      const val = parseInt(inputEl.value, 10);
+      if (!Number.isFinite(val) || val < 0) { renderArpAutoGradeSeg(); return; }
+      arpMissThresholds[field] = Math.max(0, Math.round(val));
+      if (arpMissThresholds.good > arpMissThresholds.hard) {
+        if (field === "good") arpMissThresholds.hard = arpMissThresholds.good;
+        else arpMissThresholds.good = arpMissThresholds.hard;
+      }
+      saveSharedSettings({ arpMissThresholds: { ...arpMissThresholds } });
+      renderArpAutoGradeSeg();
+    }
+    document.getElementById("arpGoodMissesInput").onchange = () => commitArpMissThreshold("good", document.getElementById("arpGoodMissesInput"));
+    document.getElementById("arpHardMissesInput").onchange = () => commitArpMissThreshold("hard", document.getElementById("arpHardMissesInput"));
+
     window.onArpTabVisibility = function (active) {
       arpTabActive = active;
       if (active) {
-        if (phase === "idle") armChord(); else renderArpTab();
+        if (arpAnkiFollow) {
+          startAnkiPolling();
+          if (arpPendingCard) {
+            applyAnkiChord(arpPendingCard);
+            arpPendingCard = null;
+          } else if (phase === "idle" && !arpCountdownIntervalId) {
+            armChord();
+          }
+        } else if (phase === "idle") {
+          armChord();
+        }
+        renderArpTab();
         startLiveTimerInterval();
       } else {
         stopLiveTimerInterval();
@@ -3200,6 +3886,12 @@
 
     renderArpFlashSeg();
     renderArpShowLhSeg();
+    renderArpAnkiSync();
+    renderArpAutoTimerSeg();
+    renderArpBreakTimerGroup();
+    renderArpAutoGradeSeg();
+    renderArpGradeStatusBadge();
+    renderArpDeckStats();
     renderArpTab();
 
     // ---------- Tracking: Arpeggios sub-tab ----------

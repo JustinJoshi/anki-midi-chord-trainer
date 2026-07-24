@@ -69,6 +69,13 @@ Best for **speed and muscle-memory drilling** on a single chord or chord family.
   - Shares the same MIDI connection as the Chord Drill tab — connect MIDI once and it works for both.
   - **Show LH notes** toggle (persisted): when off, only the chord symbol is shown and you have to remember the left-hand pedal voicing yourself.
   - **Flash on Miss** toggle (persisted): a wrong note during the sequence briefly flashes the target display red and is logged for review.
+  - **Anki Sync** — turn on "Follow card" and the app polls AnkiConnect for the current review card, matches it by root to the corresponding minor-11th arpeggio (e.g. any `G` chord → `Gm11`), and loads it automatically.
+    - On the **first successful connection** each session, the app applies the same hands-free defaults as the Chord Drill tab: Automatic Timer On, countdown 3 s, Hide Until Go On, Break Before Grading 5 s (tick muted), and Auto-Grade On.
+    - **Automatic Timer** — a new Anki card triggers the countdown, then the drill arms itself (no manual Restart needed).
+    - **Hide until go** masks the chord symbol, LH notes, and sequence chips during the countdown.
+    - **Break Before Grading** — after you complete one full lap, the app waits the configured seconds before flipping/grading the Anki card.
+    - **Auto-Grade** — grades the Anki card by the number of missed notes in the lap, not by time. Customize the miss thresholds: defaults are 0 misses → Good, 1–2 misses → Hard, 3+ misses → Again.
+    - A persistent grade status badge and centered deck-stat pills (new / learning / due) appear above the arpeggio card, same styling as the Chord Drill tab.
 - **Root Cycling tab** — drill one fixed idea across random roots, so you're testing "can I find this anywhere" instead of "do I know this shape in order":
   - **Chord mode** — pick a quality (e.g. `m7`) and play it as a block chord in a random key each rep.
   - **Arpeggio mode** — drill the canonical minor-11th shape transposed to a random root each rep.
@@ -187,6 +194,8 @@ When **Follow card** is enabled, the app reads the rendered front of the current
 - Sharps are mapped to their enharmonic flat roots (`C#m7` becomes `Dbm7`).
 
 If the card front doesn't contain a recognizable chord, the status line will say "Card found, no chord parsed".
+
+On the **Arpeggios** tab, any recognized root is mapped to the matching minor-11th arpeggio regardless of the card's actual quality — so a card showing `Gm7`, `Gmaj7`, or `Gm11` all load `Gm11`.
 
 ### Companion Anki decks
 
